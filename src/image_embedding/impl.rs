@@ -60,14 +60,32 @@ impl ImageEmbedding {
             .get(&model_file_name)
             .context(format!("Failed to retrieve {}", model_file_name))?;
 
-        let session = Session::builder()?
+        // DirectML EP requires memory_pattern=false + parallel_execution=false
+        // (upstream PR #246).
+        #[cfg(feature = "directml")]
+        let has_directml = execution_providers
+            .iter()
+            .any(|ep| ep.downcast_ref::<ort::ep::DirectML>().is_some());
+        #[cfg(not(feature = "directml"))]
+        let has_directml = false;
+
+        let mut session_builder = Session::builder()?
             .with_execution_providers(execution_providers)
             .map_err(ort_err)?
             .with_optimization_level(GraphOptimizationLevel::Level3)
             .map_err(ort_err)?
             .with_intra_threads(threads)
-            .map_err(ort_err)?
-            .commit_from_file(model_file_reference)?;
+            .map_err(ort_err)?;
+
+        if has_directml {
+            session_builder = session_builder
+                .with_memory_pattern(false)
+                .map_err(ort_err)?
+                .with_parallel_execution(false)
+                .map_err(ort_err)?;
+        }
+
+        let session = session_builder.commit_from_file(model_file_reference)?;
 
         Ok(Self::new(preprocessor, session))
     }
@@ -87,14 +105,30 @@ impl ImageEmbedding {
 
         let preprocessor = Compose::from_bytes(model.preprocessor_file)?;
 
-        let session = Session::builder()?
+        #[cfg(feature = "directml")]
+        let has_directml = execution_providers
+            .iter()
+            .any(|ep| ep.downcast_ref::<ort::ep::DirectML>().is_some());
+        #[cfg(not(feature = "directml"))]
+        let has_directml = false;
+
+        let mut session_builder = Session::builder()?
             .with_execution_providers(execution_providers)
             .map_err(ort_err)?
             .with_optimization_level(GraphOptimizationLevel::Level3)
             .map_err(ort_err)?
             .with_intra_threads(threads)
-            .map_err(ort_err)?
-            .commit_from_memory(&model.onnx_file)?;
+            .map_err(ort_err)?;
+
+        if has_directml {
+            session_builder = session_builder
+                .with_memory_pattern(false)
+                .map_err(ort_err)?
+                .with_parallel_execution(false)
+                .map_err(ort_err)?;
+        }
+
+        let session = session_builder.commit_from_memory(&model.onnx_file)?;
 
         Ok(Self::new(preprocessor, session))
     }

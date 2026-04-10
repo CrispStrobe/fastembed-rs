@@ -70,14 +70,32 @@ impl TextEmbedding {
         // prioritise loading pooling config if available, if not (thanks qdrant!), look for it in hardcoded
         let post_processing = TextEmbedding::get_default_pooling_method(&model_name);
 
-        let session = Session::builder()?
+        // DirectML EP requires memory_pattern=false + parallel_execution=false
+        // (upstream PR #246).  Guard so the calls are no-ops on other EPs.
+        #[cfg(feature = "directml")]
+        let has_directml = execution_providers
+            .iter()
+            .any(|ep| ep.downcast_ref::<ort::ep::DirectML>().is_some());
+        #[cfg(not(feature = "directml"))]
+        let has_directml = false;
+
+        let mut session_builder = Session::builder()?
             .with_execution_providers(execution_providers)
             .map_err(ort_err)?
             .with_optimization_level(GraphOptimizationLevel::Level3)
             .map_err(ort_err)?
             .with_intra_threads(threads)
-            .map_err(ort_err)?
-            .commit_from_file(model_file_reference)?;
+            .map_err(ort_err)?;
+
+        if has_directml {
+            session_builder = session_builder
+                .with_memory_pattern(false)
+                .map_err(ort_err)?
+                .with_parallel_execution(false)
+                .map_err(ort_err)?;
+        }
+
+        let session = session_builder.commit_from_file(model_file_reference)?;
 
         let tokenizer = load_tokenizer_hf_hub(model_repo, max_length)?;
         Ok(Self::new(
@@ -105,6 +123,13 @@ impl TextEmbedding {
 
         let threads = available_parallelism()?.get();
 
+        #[cfg(feature = "directml")]
+        let has_directml = execution_providers
+            .iter()
+            .any(|ep| ep.downcast_ref::<ort::ep::DirectML>().is_some());
+        #[cfg(not(feature = "directml"))]
+        let has_directml = false;
+
         let session = {
             let mut base_builder = Session::builder()?
                 .with_execution_providers(execution_providers)
@@ -113,6 +138,14 @@ impl TextEmbedding {
                 .map_err(ort_err)?
                 .with_intra_threads(threads)
                 .map_err(ort_err)?;
+
+            if has_directml {
+                base_builder = base_builder
+                    .with_memory_pattern(false)
+                    .map_err(ort_err)?
+                    .with_parallel_execution(false)
+                    .map_err(ort_err)?;
+            }
 
             match model.onnx_source {
                 OnnxSource::Memory(bytes) => {
