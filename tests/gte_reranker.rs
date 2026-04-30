@@ -33,7 +33,6 @@ fn test_gte_reranker_modernbert_base() {
     let models = [
         RerankerModel::GteRerankerModernBertBase,
         RerankerModel::GteRerankerModernBertBaseQ,
-        RerankerModel::GteRerankerModernBertBaseQ4F16,
     ];
 
     let documents = vec![

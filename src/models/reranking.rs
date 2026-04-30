@@ -45,10 +45,11 @@ pub enum RerankerModel {
     // ── Alibaba-NLP/gte-reranker-modernbert-base ──────────────────────────────
     /// Alibaba-NLP/gte-reranker-modernbert-base — 149M, English, 8192 tokens (FP32, 596 MB)
     GteRerankerModernBertBase,
-    /// Alibaba-NLP/gte-reranker-modernbert-base — INT8 quantized (150 MB)
+    /// Alibaba-NLP/gte-reranker-modernbert-base — INT8 quantized (150 MB).
+    /// English-only: per-group Spearman vs FP32 = 1.0 on English queries,
+    /// drops to ~0.8 on non-English queries.  ModernBERT is English-trained,
+    /// so this is consistent with the underlying model's design.
     GteRerankerModernBertBaseQ,
-    /// Alibaba-NLP/gte-reranker-modernbert-base — Q4F16 quantized (140 MB)
-    GteRerankerModernBertBaseQ4F16,
     // ── zeroentropy/zerank-1-small ────────────────────────────────────────────
     /// zeroentropy/zerank-1-small — 1.7B Qwen3, multilingual reranker (FP16, ~3.2 GB)
     ZerankSmall,
@@ -212,16 +213,6 @@ pub fn reranker_model_list() -> Vec<RerankerModelInfo> {
             ),
             model_code: String::from("Alibaba-NLP/gte-reranker-modernbert-base"),
             model_file: String::from("onnx/model_int8.onnx"),
-            additional_files: vec![],
-            prompt_template: None,
-        },
-        RerankerModelInfo {
-            model: RerankerModel::GteRerankerModernBertBaseQ4F16,
-            description: String::from(
-                "gte-reranker-modernbert-base — 149M, English, 8192 tokens, ModernBERT cross-encoder (Q4F16, 140 MB)",
-            ),
-            model_code: String::from("Alibaba-NLP/gte-reranker-modernbert-base"),
-            model_file: String::from("onnx/model_q4f16.onnx"),
             additional_files: vec![],
             prompt_template: None,
         },
