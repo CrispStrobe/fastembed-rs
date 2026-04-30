@@ -2,6 +2,10 @@
 .DS_Store
 desktop.ini
 
+## Validation / WIP artifacts (wip/validation branch only)
+/results/
+/run_harrier_comparison.sh
+
 ## Editor
 *.swp
 *.swo
