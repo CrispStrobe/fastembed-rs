@@ -345,7 +345,6 @@ impl TextEmbedding {
             EmbeddingModel::JinaEmbeddingsV5Small => Some(Pooling::LastToken),
             // Harrier decoder-only: pre-pooled `sentence_embedding` output, last-token as fallback
             EmbeddingModel::HarrierOSSV1_270M => Some(Pooling::LastToken),
-            EmbeddingModel::HarrierOSSV1_270MQ => Some(Pooling::LastToken),
         }
     }
 
@@ -379,7 +378,6 @@ impl TextEmbedding {
             EmbeddingModel::SnowflakeArcticEmbedMQ => QuantizationMode::Dynamic,
             EmbeddingModel::SnowflakeArcticEmbedMLongQ => QuantizationMode::Dynamic,
             EmbeddingModel::SnowflakeArcticEmbedLQ => QuantizationMode::Dynamic,
-            EmbeddingModel::HarrierOSSV1_270MQ => QuantizationMode::Dynamic,
             _ => QuantizationMode::None,
         }
     }

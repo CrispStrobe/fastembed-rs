@@ -121,7 +121,6 @@ fn verify_embeddings(model: &EmbeddingModel, embeddings: &[Embedding]) -> Result
         EmbeddingModel::F2LlmV2_0_6BFp32 => [-0.60010016, -1.2393193, -0.6907619, 1.3460654],
         EmbeddingModel::F2LlmV2_0_6BInt4 => return Ok(()),
         EmbeddingModel::HarrierOSSV1_270M => [-1.2506653, -0.398214, -0.32943717, -1.5022918],
-        EmbeddingModel::HarrierOSSV1_270MQ => return Ok(()),
         _ => panic!("Model {model} not found. If you have just inserted this `EmbeddingModel` variant, please update the expected embeddings."),
     };
 

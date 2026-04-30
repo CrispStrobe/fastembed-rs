@@ -58,10 +58,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         TextInitOptions::new(EmbeddingModel::HarrierOSSV1_270M).with_show_download_progress(true),
     )?;
 
-    println!("Loading Harrier OSS v1 270M (INT8) …");
-    let mut harrier_int8 = TextEmbedding::try_new(
-        TextInitOptions::new(EmbeddingModel::HarrierOSSV1_270MQ).with_show_download_progress(true),
-    )?;
+    // Note: HarrierOSSV1_270MQ was removed because its ONNX uses
+    // GatherBlockQuantized.bits which requires ORT >= 1.23 (we ship
+    // ort = 2.0.0-rc.11 / ORT 1.22).  Re-enable when the ort crate
+    // is bumped to rc.12+.
 
     println!();
 
@@ -72,8 +72,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let (bge_embs, bge_stats) = timed_embed(&mut bge_small, &documents, WARMUP, RUNS)?;
     let (harrier_fp32_embs, harrier_fp32_stats) =
         timed_embed(&mut harrier_fp32, &documents, WARMUP, RUNS)?;
-    let (harrier_int8_embs, harrier_int8_stats) =
-        timed_embed(&mut harrier_int8, &documents, WARMUP, RUNS)?;
 
     let bge_dim = bge_embs[0].len();
     let harrier_dim = harrier_fp32_embs[0].len();
@@ -98,29 +96,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         &harrier_fp32_stats,
         documents.len(),
     );
-    print_row(
-        "Harrier INT8",
-        harrier_dim,
-        &harrier_int8_stats,
-        documents.len(),
-    );
     println!();
 
     let speed_ratio_fp32 = bge_stats.mean_ms / harrier_fp32_stats.mean_ms;
-    let speed_ratio_int8 = bge_stats.mean_ms / harrier_int8_stats.mean_ms;
     println!(
         "Harrier FP32 is {:.2}x {} than BGE-Small (mean latency)",
         speed_ratio_fp32.abs(),
         if speed_ratio_fp32 >= 1.0 {
-            "faster"
-        } else {
-            "slower"
-        }
-    );
-    println!(
-        "Harrier INT8 is {:.2}x {} than BGE-Small (mean latency)",
-        speed_ratio_int8.abs(),
-        if speed_ratio_int8 >= 1.0 {
             "faster"
         } else {
             "slower"
@@ -136,7 +118,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     for (label, embs) in [
         ("BGE-Small-EN-v1.5", &bge_embs),
         ("Harrier FP32      ", &harrier_fp32_embs),
-        ("Harrier INT8      ", &harrier_int8_embs),
     ] {
         let avg_hi = avg_cosine_sim(embs, high_sim_pairs);
         let avg_lo = avg_cosine_sim(embs, low_sim_pairs);
@@ -151,32 +132,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("\n  (larger delta = better discrimination between similar and dissimilar texts)");
     println!();
 
-    // ── Quantisation fidelity (FP32 vs INT8 Harrier) ─────────────────────────
-    println!("==========================================================");
-    println!(" Harrier FP32 vs INT8 Quantisation Fidelity");
-    println!("==========================================================");
-    let mut fidelity_scores: Vec<f32> = Vec::new();
-    for (i, (fp32_emb, int8_emb)) in harrier_fp32_embs
-        .iter()
-        .zip(harrier_int8_embs.iter())
-        .enumerate()
-    {
-        let sim = cosine_similarity(fp32_emb, int8_emb);
-        fidelity_scores.push(sim);
-        if i < 3 {
-            println!("  doc {:2}: cosine(FP32, INT8) = {:.5}", i, sim);
-        }
-    }
-    let avg_fidelity: f32 = fidelity_scores.iter().sum::<f32>() / fidelity_scores.len() as f32;
-    let min_fidelity = fidelity_scores
-        .iter()
-        .cloned()
-        .fold(f32::INFINITY, f32::min);
-    println!("  …");
-    println!("  avg fidelity across all docs : {:.5}", avg_fidelity);
-    println!("  min fidelity across all docs : {:.5}", min_fidelity);
-    println!("  (values near 1.0 mean INT8 is nearly identical to FP32)\n");
-
     // ── Save markdown report ──────────────────────────────────────────────────
     save_report(
         documents.len(),
@@ -185,8 +140,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         harrier_dim,
         &bge_stats,
         &harrier_fp32_stats,
-        &harrier_int8_stats,
-        avg_fidelity,
         avg_cosine_sim(&bge_embs, high_sim_pairs),
         avg_cosine_sim(&bge_embs, low_sim_pairs),
         avg_cosine_sim(&harrier_fp32_embs, high_sim_pairs),
@@ -280,8 +233,6 @@ fn save_report(
     harrier_dim: usize,
     bge: &TimingStats,
     harrier_fp32: &TimingStats,
-    harrier_int8: &TimingStats,
-    quant_fidelity: f32,
     bge_sim_hi: f32,
     bge_sim_lo: f32,
     harrier_sim_hi: f32,
@@ -303,7 +254,6 @@ Documents : {n_docs}  |  Runs : {runs} (after 5 warmup)
 |-------|-----|--------|---------|--------|---------|
 | BGE-Small-EN-v1.5 | {bge_dim} | {bge_min:.1} | {bge_mean:.1} | {bge_max:.1} | {bge_tps:.1} |
 | Harrier FP32 | {harrier_dim} | {fp32_min:.1} | {fp32_mean:.1} | {fp32_max:.1} | {fp32_tps:.1} |
-| Harrier INT8 | {harrier_dim} | {int8_min:.1} | {int8_mean:.1} | {int8_max:.1} | {int8_tps:.1} |
 
 ## Semantic Coherence (within-model cosine similarity)
 
@@ -311,12 +261,6 @@ Documents : {n_docs}  |  Runs : {runs} (after 5 warmup)
 |-------|-----------------|---------------------|-------|
 | BGE-Small | {bge_sim_hi:.4} | {bge_sim_lo:.4} | {bge_delta:.4} |
 | Harrier FP32 | {harrier_sim_hi:.4} | {harrier_sim_lo:.4} | {harrier_delta:.4} |
-
-## Quantisation Fidelity (FP32 vs INT8 Harrier)
-
-Average cosine similarity between FP32 and INT8 embeddings for the same texts: **{quant_fidelity:.5}**
-
-_(1.0 = identical; values above 0.99 indicate negligible quality loss from quantisation)_
 ",
         ts = ts,
         n_docs = n_docs,
@@ -331,17 +275,12 @@ _(1.0 = identical; values above 0.99 indicate negligible quality loss from quant
         fp32_mean = harrier_fp32.mean_ms,
         fp32_max = harrier_fp32.max_ms,
         fp32_tps = n_docs as f64 / (harrier_fp32.mean_ms / 1000.0),
-        int8_min = harrier_int8.min_ms,
-        int8_mean = harrier_int8.mean_ms,
-        int8_max = harrier_int8.max_ms,
-        int8_tps = n_docs as f64 / (harrier_int8.mean_ms / 1000.0),
         bge_sim_hi = bge_sim_hi,
         bge_sim_lo = bge_sim_lo,
         bge_delta = bge_sim_hi - bge_sim_lo,
         harrier_sim_hi = harrier_sim_hi,
         harrier_sim_lo = harrier_sim_lo,
         harrier_delta = harrier_sim_hi - harrier_sim_lo,
-        quant_fidelity = quant_fidelity,
     );
 
     let mut f = File::create("benchmark_results.md")?;
