@@ -121,19 +121,35 @@ same. Catches Rust-side pooling, normalization, or prompt-template bugs.
 - [ ] update PR descriptions of PR-a/b/c with the validation table
 - [ ] open follow-up issues for any FAIL we don't fix in this round
 
-## Phase 7 — actually-fix-the-broken-cases
+## Phase 7 — actually-fix-the-broken-cases  (results)
 
-- [ ] Verify `ort = "2.0.0-rc.12"` ships ORT >= 1.23, then bump Cargo.toml
-      to fix HarrierOSSV1_270MQ load failure.
-- [ ] V5 Nano Q: keep with "borderline" note in description; add comment
-      pointing at the single-sentence outlier finding.
-- [ ] Write streaming FP16 converter (avoids the 2 GB protobuf limit by
-      loading proto without external data, walking initializers, and
-      writing tensor-by-tensor to a new external data file).  Convert
-      F2LLM and Octen FP32 → FP16, validate, and ship as new variants
-      `F2LlmV2_0_6BFp16` / `OctenEmbedding0_6BFp16` (1.2 GB each, near-
-      zero quality loss).
-- [ ] SmoothQuant for F2LLM INT8: rewrite the ONNX graph to migrate
-      activation outliers into weights, calibrate on a real corpus,
-      then re-quantize.  Expected to recover INT8 quality to cos > 0.95.
-      Replaces the dropped F2LlmV2_0_6BInt8 with a fixed version.
+- [x] Verified `ort = "2.0.0-rc.12"` ships ORT 1.24, but the API is
+      not source-compatible with rc.11 (~136 errors).  HarrierQ dropped
+      until that migration is done.
+- [x] Streaming FP16 converter written
+      (`scripts/convert_fp16_streaming.py`).  Bypasses the 2 GB protobuf
+      serialization limit that breaks `onnxconverter_common.float16` and
+      `onnxruntime.transformers.float16`.
+      F2LLM FP16: cos_min=1.000, 1.2 GB.  PASS
+      Octen  FP16: cos_min=1.000, 1.2 GB.  PASS
+- [x] SmoothQuant for F2LLM INT8
+      (`scripts/smoothquant_onnx.py` + `quant_smoothed_int8.py`).
+      F2LLM smoothed FP32 (math equivalence): cos_min=1.000  PASS
+      F2LLM smoothed INT8 (alpha=0.8):         cos_min=0.932  PASS
+      → 3.1× quality improvement vs vanilla INT8 (0.30 → 0.93).
+- [~] Octen SmoothQuant INT8: running with alpha=0.8.
+
+## Phase 8 — re-upload and re-add variants
+
+Verified-quality artifacts on disk:
+  /Volumes/backups/ai/fastembed-rs-wip/f2llm_work/onnx_fp16/
+  /Volumes/backups/ai/fastembed-rs-wip/f2llm_work/onnx_smoothed_a08_int8/
+  /Volumes/backups/ai/fastembed-rs-wip/octen_work/onnx_fp16/
+  /Volumes/backups/ai/fastembed-rs-wip/octen_work/onnx_smoothed_a08_int8/  (pending)
+
+- [ ] Upload F2LLM FP16 → cstr/F2LLM-v2-0.6B-ONNX-FP16
+- [ ] Upload F2LLM SmoothQuant INT8 → cstr/F2LLM-v2-0.6B-ONNX-INT8
+- [ ] Upload Octen FP16 → cstr/Octen-Embedding-0.6B-ONNX-FP16
+- [ ] Upload Octen SmoothQuant INT8 → cstr/Octen-Embedding-0.6B-ONNX-INT8
+- [ ] Re-add `F2LlmV2_0_6BFp16`, `F2LlmV2_0_6BInt8`, `OctenEmbedding0_6BFp16`,
+      `OctenEmbedding0_6BInt8` to fastembed-rs source.
