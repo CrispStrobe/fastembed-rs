@@ -339,9 +339,7 @@ impl TextEmbedding {
             EmbeddingModel::OctenEmbedding0_6BInt4Full => Some(Pooling::LastToken),
             // F2LLM-v2-0.6B: same Qwen3 decoder architecture, last-token pooling
             EmbeddingModel::F2LlmV2_0_6BFp32 => Some(Pooling::LastToken),
-            EmbeddingModel::F2LlmV2_0_6BInt8 => Some(Pooling::LastToken),
             EmbeddingModel::F2LlmV2_0_6BInt4 => Some(Pooling::LastToken),
-            EmbeddingModel::F2LlmV2_0_6BInt8Full => Some(Pooling::LastToken),
             EmbeddingModel::JinaEmbeddingsV5Small => Some(Pooling::LastToken),
             // Harrier decoder-only: pre-pooled `sentence_embedding` output, last-token as fallback
             EmbeddingModel::HarrierOSSV1_270M => Some(Pooling::LastToken),

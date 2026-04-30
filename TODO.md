@@ -23,14 +23,13 @@ Reports written under:
 
 ## Phase 1 — finish F2LLM quantization triage
 
-- [x] validate F2LLM `int8_pt` (per-tensor dynamic) — **FAIL**, cos_min=0.249,
-      worse than per-channel `int8` (0.304). Dynamic INT8 weight-only quant
-      is fundamentally inadequate for F2LLM regardless of granularity.
-- [~] run + validate F2LLM `int8_static` (QDQ + text calibration) — running
-- [ ] if `int8_static` also fails: try INT4 MatMulNBits or recommend dropping
-      `F2LlmV2_0_6BInt8`
-- [ ] decide whether `F2LlmV2_0_6BInt8` should be dropped, replaced, or kept;
-      record decision in `fastembed-rs-wip/LEARNINGS.md`
+- [x] validate F2LLM `int8_pt` (per-tensor dynamic) — **FAIL**, cos_min=0.249.
+- [x] validate F2LLM `int8_static` (QDQ + text calibration) — **FAIL**,
+      cos_min=0.119 (worst).
+- [~] validate cached `int4` (MatMulNBits) and `int8_full` — running
+- [ ] decision: every dynamic INT8 strategy fails for F2LLM. Drop
+      `F2LlmV2_0_6BInt8` regardless; keep `_Int4` / `_Int8Full` only if they
+      pass the harness.
 
 ## Phase 2 — generalize the harness
 
@@ -45,6 +44,13 @@ Reports written under:
 
 ## Phase 3 — validate all new embedding models added in PR-c
 
+Harness sanity-checked against AllMiniLML6V2 baseline:
+  - FP32 vs HF: cos_min=1.000  PASS  (harness math correct, encoder+mean OK)
+  - Q   vs HF: cos_min=0.986  PASS  (encoder INT8 dynamic is fine in general)
+
+Therefore the F2LLM INT8 collapse is NOT a harness bug.  Predicted picture:
+encoder + INT8 = PASS, decoder LLM + INT8/INT4 = FAIL or borderline.
+
 For each: load FP32 (or whatever the upstream original is) from HF, get
 ground-truth embeddings, then test every ONNX variant we ship.
 
@@ -58,10 +64,12 @@ Embedding models:
 - [ ] OctenEmbedding0_6BInt4       (last_token, INT4 MatMulNBits)
 - [ ] OctenEmbedding0_6BInt8Full   (last_token, INT8 static)
 - [ ] OctenEmbedding0_6BInt4Full   (last_token, INT4 + INT8 Gather)
-- [~] F2LlmV2_0_6BFp32             — PASS (cached + freshly exported)
-- [!] F2LlmV2_0_6BInt8             — FAIL (cos_min 0.304, per-channel dyn MatMul)
-- [ ] F2LlmV2_0_6BInt4
-- [ ] F2LlmV2_0_6BInt8Full
+- [x] F2LlmV2_0_6BFp32             — PASS (cached + freshly exported, cos=1.000)
+- [!] F2LlmV2_0_6BInt8             — FAIL cos_min 0.304 (per-channel dyn MatMul)
+- [!] F2LlmV2_0_6BInt8 (int8_pt)   — FAIL cos_min 0.249 (per-tensor dyn MatMul)
+- [!] F2LlmV2_0_6BInt8 (int8_static)— FAIL cos_min 0.119 (QDQ + 14-sentence calib)
+- [!] F2LlmV2_0_6BInt4             — FAIL cos_min 0.640 (MatMulNBits, borderline)
+- [!] F2LlmV2_0_6BInt8Full         — FAIL cos_min 0.212 (MatMul+Gather quantized)
 - [ ] JinaEmbeddingsV3             (mean / task-specific)
 - [ ] JinaEmbeddingsV5Nano         (pre_pooled `sentence_embedding`)
 - [ ] JinaEmbeddingsV5Small        (pre_pooled `sentence_embedding`)

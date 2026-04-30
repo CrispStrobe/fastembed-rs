@@ -120,9 +120,7 @@ fn verify_embeddings(model: &EmbeddingModel, embeddings: &[Embedding]) -> Result
         EmbeddingModel::OctenEmbedding0_6BInt8Full => return Ok(()),
         EmbeddingModel::OctenEmbedding0_6BInt4Full => return Ok(()),
         EmbeddingModel::F2LlmV2_0_6BFp32 => [-0.60010016, -1.2393193, -0.6907619, 1.3460654],
-        EmbeddingModel::F2LlmV2_0_6BInt8 => return Ok(()),
         EmbeddingModel::F2LlmV2_0_6BInt4 => return Ok(()),
-        EmbeddingModel::F2LlmV2_0_6BInt8Full => return Ok(()),
         EmbeddingModel::HarrierOSSV1_270M => [-1.2506653, -0.398214, -0.32943717, -1.5022918],
         EmbeddingModel::HarrierOSSV1_270MQ => return Ok(()),
         _ => panic!("Model {model} not found. If you have just inserted this `EmbeddingModel` variant, please update the expected embeddings."),
@@ -843,16 +841,8 @@ fn test_new_models_semantic_retrieval() {
         ),
         (EmbeddingModel::F2LlmV2_0_6BFp32, "cstr/F2LLM-v2-0.6B-ONNX"),
         (
-            EmbeddingModel::F2LlmV2_0_6BInt8,
-            "cstr/F2LLM-v2-0.6B-ONNX-INT8",
-        ),
-        (
             EmbeddingModel::F2LlmV2_0_6BInt4,
             "cstr/F2LLM-v2-0.6B-ONNX-INT4",
-        ),
-        (
-            EmbeddingModel::F2LlmV2_0_6BInt8Full,
-            "cstr/F2LLM-v2-0.6B-ONNX-INT8-FULL",
         ),
     ];
 

@@ -147,12 +147,12 @@ pub enum EmbeddingModel {
     // ── F2LLM-v2-0.6B (Qwen3-1024d fine-tune, decoder, last-token pooling) ──────
     /// cstr/F2LLM-v2-0.6B-ONNX — FP32 reference (2.4 GB, external data)
     F2LlmV2_0_6BFp32,
-    /// cstr/F2LLM-v2-0.6B-ONNX-INT8 — per-channel INT8 MatMul (~1.1 GB)
-    F2LlmV2_0_6BInt8,
-    /// cstr/F2LLM-v2-0.6B-ONNX-INT4 — INT4 MatMulNBits block=32 (~0.9 GB)
+    /// cstr/F2LLM-v2-0.6B-ONNX-INT4 — INT4 MatMulNBits block=32 (~0.9 GB).
+    /// Quality is borderline (cos_min ≈0.64 vs HF/PyTorch); top-1 retrieval
+    /// preserved on simple sets but per-sentence cosine drift is significant.
+    /// Decoder LLMs need group/AWQ-style quantization plus outlier handling
+    /// to fully recover; this is the best of the available F2LLM quants.
     F2LlmV2_0_6BInt4,
-    /// cstr/F2LLM-v2-0.6B-ONNX-INT8-FULL — INT8 incl. embedding table (~600 MB)
-    F2LlmV2_0_6BInt8Full,
 
     // ── Jina Embeddings v5 text-small (Qwen3-0.6B, 1024d, last-token pooling) ──
     /// jinaai/jina-embeddings-v5-text-small-retrieval — 677M, 1024d, 32k context, multilingual
@@ -751,36 +751,15 @@ fn init_models_map() -> HashMap<EmbeddingModel, ModelInfo<EmbeddingModel>> {
             output_key: None,
         },
         ModelInfo {
-            model: EmbeddingModel::F2LlmV2_0_6BInt8,
-            dim: 1024,
-            description: String::from(
-                "F2LLM-v2-0.6B INT8 — 1024d, 32k context, last-token pooling (per-channel QLinearMatMul, ~1.1 GB)",
-            ),
-            model_code: String::from("cstr/F2LLM-v2-0.6B-ONNX-INT8"),
-            model_file: String::from("model.int8.onnx"),
-            additional_files: vec!["model.int8.onnx.data".to_string()],
-            output_key: None,
-        },
-        ModelInfo {
             model: EmbeddingModel::F2LlmV2_0_6BInt4,
             dim: 1024,
             description: String::from(
-                "F2LLM-v2-0.6B INT4 — 1024d, 32k context, last-token pooling (MatMulNBits block=32, ~0.9 GB)",
+                "F2LLM-v2-0.6B INT4 — 1024d, 32k context, last-token pooling (MatMulNBits block=32, ~0.9 GB). \
+                 Quality is reduced vs FP32 (cos≈0.64 to PyTorch reference); use only when memory dominates accuracy.",
             ),
             model_code: String::from("cstr/F2LLM-v2-0.6B-ONNX-INT4"),
             model_file: String::from("model.int4.onnx"),
             additional_files: vec!["model.int4.onnx.data".to_string()],
-            output_key: None,
-        },
-        ModelInfo {
-            model: EmbeddingModel::F2LlmV2_0_6BInt8Full,
-            dim: 1024,
-            description: String::from(
-                "F2LLM-v2-0.6B INT8-Full — 1024d, 32k context, last-token pooling (MatMul+Gather quantized, ~600 MB)",
-            ),
-            model_code: String::from("cstr/F2LLM-v2-0.6B-ONNX-INT8-FULL"),
-            model_file: String::from("model.int8_full.onnx"),
-            additional_files: vec!["model.int8_full.onnx.data".to_string()],
             output_key: None,
         },
         // ── Jina Embeddings v5 text-small ────────────────────────────────────────
