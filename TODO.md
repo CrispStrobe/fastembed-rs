@@ -158,18 +158,18 @@ same. Catches Rust-side pooling, normalization, or prompt-template bugs.
    `JinaEmbeddingsV5SmallFp16` and `JinaEmbeddingsV5SmallInt8` added.
    Repos: cstr/jina-embeddings-v5-text-small-retrieval-onnx-{fp16,int8}.
 3. Reranker validation harness (`scripts/reranker_diff.py`): **DONE.**
-   Validated `GteRerankerModernBertBase` family on a 4-query test set:
-     - FP32 PASS,
-     - Q (INT8) Spearman 0.96 overall but 1.0 / 0.8 split English / German;
-       kept with English-only marker,
-     - Q4F16 fails to load in ORT; **DROPPED**.
-   Remaining unvalidated reranker quants in PR-c (need their ONNX
-   downloaded first):
-     - LlamaNemotronRerank1BV2{Int8,Int4Full}    (cstr/llama-nemotron-rerank-1b-v2-ONNX)
-     - MxbaiRerank{Xsmall,Base,Large}V1Q
+   Validated so far:
+     - GteRerankerModernBertBase  FP32 PASS
+       GteRerankerModernBertBaseQ Q (INT8) 1.0 / 0.8 English/German split,
+                                  kept with English-only marker.
+       GteRerankerModernBertBaseQ4F16 fails to load in ORT; **DROPPED**.
+     - MxbaiRerankXsmallV1   FP32 PASS, Q PASS (Spearman 0.994 multilingual)
+   Still unvalidated (need ONNX downloads):
+     - MxbaiRerank{Base,Large}V1Q
+     - LlamaNemotronRerank1BV2{Int8,Int4Full}
      - ZerankSmall{Int8,Int4}
      - JINARerankerV2BaseMultilingual{Int8,Fp16}
-     - MsMarcoMiniLM{L6,L12}V2  (FP32 only, no quants ship)
+     - MsMarcoMiniLM{L6,L12}V2  (FP32 only — no quants ship)
 4. Run the full `cargo test` suite (with downloads enabled) on the
    re-added variants once the F2LLM FP16 upload finishes.
 5. ort crate migration rc.11 → rc.12 to re-enable HarrierOSSV1_270MQ
