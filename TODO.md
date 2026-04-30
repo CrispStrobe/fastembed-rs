@@ -153,9 +153,10 @@ same. Catches Rust-side pooling, normalization, or prompt-template bugs.
 1. F2LlmV2_0_6BInt4 (cos=0.64) disposition.  Either drop, or rebuild via
    SmoothQuant + INT4 MatMulNBits (the same outlier-migration applied to
    group-quantization should reach ≥0.93).
-2. JinaEmbeddingsV5Small: same Qwen3 architecture as F2LLM/Octen.  Apply
-   the FP16 + SmoothQuant INT8 recipe; ship as `JinaEmbeddingsV5SmallFp16`
-   and `JinaEmbeddingsV5SmallInt8`.  Currently FP32 only at 2.5 GB.
+2. JinaEmbeddingsV5Small: **DONE.** Same recipe as F2LLM/Octen.
+   FP16 cos=1.000, SmoothQuant INT8 cos=0.994.  Variants
+   `JinaEmbeddingsV5SmallFp16` and `JinaEmbeddingsV5SmallInt8` added.
+   Repos: cstr/jina-embeddings-v5-text-small-retrieval-onnx-{fp16,int8}.
 3. Build reranker validation harness (`reranker_diff.py`).  Spearman /
    Pearson of cross-encoder logits + ranking-order match on a held-out
    set.  Phase 4 of this plan was never run; PR-c added many quantized

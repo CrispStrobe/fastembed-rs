@@ -347,6 +347,8 @@ impl TextEmbedding {
             EmbeddingModel::F2LlmV2_0_6BInt8 => Some(Pooling::LastToken),
             EmbeddingModel::F2LlmV2_0_6BInt4 => Some(Pooling::LastToken),
             EmbeddingModel::JinaEmbeddingsV5Small => Some(Pooling::LastToken),
+            EmbeddingModel::JinaEmbeddingsV5SmallFp16 => Some(Pooling::LastToken),
+            EmbeddingModel::JinaEmbeddingsV5SmallInt8 => Some(Pooling::LastToken),
             // Harrier decoder-only: pre-pooled `sentence_embedding` output, last-token as fallback
             EmbeddingModel::HarrierOSSV1_270M => Some(Pooling::LastToken),
         }

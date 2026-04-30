@@ -172,6 +172,12 @@ pub enum EmbeddingModel {
     /// jinaai/jina-embeddings-v5-text-small-retrieval — 677M, 1024d, 32k context, multilingual
     /// Prepend "Query: " to queries and "Document: " to documents for retrieval.
     JinaEmbeddingsV5Small,
+    /// cstr/jina-embeddings-v5-text-small-retrieval-onnx-fp16 — FP16 weights via streaming
+    /// converter (W8A16-style); cos=1.000 vs PyTorch reference (~1.2 GB).
+    JinaEmbeddingsV5SmallFp16,
+    /// cstr/jina-embeddings-v5-text-small-retrieval-onnx-int8 — SmoothQuant (alpha=0.8) +
+    /// per-channel dynamic INT8; cos≈0.994 vs PyTorch reference (~1.06 GB).
+    JinaEmbeddingsV5SmallInt8,
 
     // ── Microsoft Harrier OSS v1 270M (decoder-only, last-token pooling) ─────
     /// onnx-community/harrier-oss-v1-270m-ONNX — 640d, multilingual, decoder-only architecture
@@ -828,6 +834,32 @@ fn init_models_map() -> HashMap<EmbeddingModel, ModelInfo<EmbeddingModel>> {
             model_code: String::from("jinaai/jina-embeddings-v5-text-small-retrieval"),
             model_file: String::from("onnx/model.onnx"),
             additional_files: vec!["onnx/model.onnx_data".to_string()],
+            output_key: None,
+        },
+        ModelInfo {
+            model: EmbeddingModel::JinaEmbeddingsV5SmallFp16,
+            dim: 1024,
+            description: String::from(
+                "jina-embeddings-v5-text-small-retrieval FP16 — 1024d, last-token pooling. \
+                 Streaming FP32→FP16 export (W8A16-style); cos=1.000 vs PyTorch reference, \
+                 ~1.2 GB (50% memory of FP32). Prepend \"Query: \" / \"Document: \" prefixes.",
+            ),
+            model_code: String::from("cstr/jina-embeddings-v5-text-small-retrieval-onnx-fp16"),
+            model_file: String::from("model.fp16.onnx"),
+            additional_files: vec!["model.fp16.onnx.data".to_string()],
+            output_key: None,
+        },
+        ModelInfo {
+            model: EmbeddingModel::JinaEmbeddingsV5SmallInt8,
+            dim: 1024,
+            description: String::from(
+                "jina-embeddings-v5-text-small-retrieval INT8 — 1024d, last-token pooling. \
+                 SmoothQuant (alpha=0.8) + per-channel dynamic INT8; cos≈0.994 vs PyTorch \
+                 reference, ~1.06 GB.",
+            ),
+            model_code: String::from("cstr/jina-embeddings-v5-text-small-retrieval-onnx-int8"),
+            model_file: String::from("model.int8.onnx"),
+            additional_files: vec!["model.int8.onnx.data".to_string()],
             output_key: None,
         },
         // ── Microsoft Harrier OSS v1 270M ────────────────────────────────────────

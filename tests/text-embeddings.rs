@@ -114,6 +114,8 @@ fn verify_embeddings(model: &EmbeddingModel, embeddings: &[Embedding]) -> Result
         EmbeddingModel::GteModernBertBaseQ => return Ok(()),
         EmbeddingModel::GteModernBertBaseQ4F16 => return Ok(()),
         EmbeddingModel::JinaEmbeddingsV5Small => [0.91580373, 0.46739948, -1.1745838, 1.3157014],
+        EmbeddingModel::JinaEmbeddingsV5SmallFp16 => return Ok(()),
+        EmbeddingModel::JinaEmbeddingsV5SmallInt8 => return Ok(()),
         EmbeddingModel::Qwen3Embedding0_6BUint8 => return Ok(()),
         EmbeddingModel::OctenEmbedding0_6BFp32 => [-1.1679014, 1.0701674, 0.56380516, 1.4149448],
         EmbeddingModel::OctenEmbedding0_6BFp16 => return Ok(()),
