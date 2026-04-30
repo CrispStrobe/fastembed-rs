@@ -139,8 +139,6 @@ pub enum EmbeddingModel {
     OctenEmbedding0_6BFp32,
     /// cstr/octen-embedding-0.6b-onnx-int4 — INT4 MatMulNBits block=32 (~0.9 GB)
     OctenEmbedding0_6BInt4,
-    /// cstr/Octen-Embedding-0.6B-ONNX-INT8-FULL — INT8 incl. embedding table (~570 MB)
-    OctenEmbedding0_6BInt8Full,
     /// cstr/Octen-Embedding-0.6B-ONNX-INT4-FULL — INT4 MatMul + INT8 Gather (~434 MB)
     OctenEmbedding0_6BInt4Full,
 
@@ -714,17 +712,6 @@ fn init_models_map() -> HashMap<EmbeddingModel, ModelInfo<EmbeddingModel>> {
             model_code: String::from("cstr/octen-embedding-0.6b-onnx-int4"),
             model_file: String::from("model.int4.onnx"),
             additional_files: vec!["model.int4.onnx.data".to_string()],
-            output_key: None,
-        },
-        ModelInfo {
-            model: EmbeddingModel::OctenEmbedding0_6BInt8Full,
-            dim: 1024,
-            description: String::from(
-                "Octen-Embedding-0.6B INT8-Full — 1024d, 32k context, last-token pooling (incl. embedding table, external data, ~570 MB)",
-            ),
-            model_code: String::from("cstr/Octen-Embedding-0.6B-ONNX-INT8-FULL"),
-            model_file: String::from("model.int8_full.onnx"),
-            additional_files: vec!["model.int8_full.onnx.data".to_string()],
             output_key: None,
         },
         ModelInfo {

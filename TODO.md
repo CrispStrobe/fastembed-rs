@@ -56,14 +56,14 @@ ground-truth embeddings, then test every ONNX variant we ship.
 
 Embedding models:
 
-- [ ] PixieRuneV1                  (cls)
-- [ ] PixieRuneV1Q                 (cls, INT8)
-- [ ] PixieRuneV1Int4              (cls, INT4 MatMulNBits)
-- [ ] PixieRuneV1Int4Full          (cls, INT4 + INT8 Gather)
-- [ ] OctenEmbedding0_6BFp32       (last_token)
-- [ ] OctenEmbedding0_6BInt4       (last_token, INT4 MatMulNBits)
-- [ ] OctenEmbedding0_6BInt8Full   (last_token, INT8 static)
-- [ ] OctenEmbedding0_6BInt4Full   (last_token, INT4 + INT8 Gather)
+- [x] PixieRuneV1                  PASS cos=1.000
+- [x] PixieRuneV1Q                 PASS cos_min=0.963
+- [x] PixieRuneV1Int4              PASS cos_min=0.930
+- [x] PixieRuneV1Int4Full          PASS cos_min=0.930
+- [x] OctenEmbedding0_6BFp32       PASS cos=1.000
+- [x] OctenEmbedding0_6BInt4       PASS cos_min=0.922 (above F2LLM int4 by ~0.3 — different fine-tune)
+- [!] OctenEmbedding0_6BInt8Full   FAIL cos_min=0.602 (same Qwen3 outlier issue, drop)
+- [x] OctenEmbedding0_6BInt4Full   PASS cos_min=0.922
 - [x] F2LlmV2_0_6BFp32             — PASS (cached + freshly exported, cos=1.000)
 - [!] F2LlmV2_0_6BInt8             — FAIL cos_min 0.304 (per-channel dyn MatMul)
 - [!] F2LlmV2_0_6BInt8 (int8_pt)   — FAIL cos_min 0.249 (per-tensor dyn MatMul)
@@ -73,12 +73,14 @@ Embedding models:
 - [ ] JinaEmbeddingsV3             (mean / task-specific)
 - [ ] JinaEmbeddingsV5Nano         (pre_pooled `sentence_embedding`)
 - [ ] JinaEmbeddingsV5Small        (pre_pooled `sentence_embedding`)
-- [ ] HarrierOSSV1_270M            (cls/mean — verify)
-- [ ] HarrierOSSV1_270MQ
+- [x] HarrierOSSV1_270M            PASS cos=1.000 (last_token, sentence_embedding)
+- [!] HarrierOSSV1_270MQ           PASS cos_min=0.99993 BUT requires ORT >= 1.23
+      (current ort = 2.0.0-rc.11 ships ORT 1.22 — file fails to load in fastembed-rs).
+      Bump ort crate or drop variant.
 - [ ] SnowflakeArcticEmbedMV2      (cls)
-- [ ] GteModernBertBase            (cls)
-- [ ] GteModernBertBaseQ           (cls, INT8)
-- [ ] GteModernBertBaseQ4F16       (cls, INT4 + FP16)
+- [x] GteModernBertBase            PASS cos=1.000
+- [x] GteModernBertBaseQ           PASS cos_min=0.943
+- [x] GteModernBertBaseQ4F16       PASS cos_min=0.971
 
 ## Phase 4 — validate all rerankers added
 

@@ -117,7 +117,6 @@ fn verify_embeddings(model: &EmbeddingModel, embeddings: &[Embedding]) -> Result
         EmbeddingModel::Qwen3Embedding0_6BUint8 => return Ok(()),
         EmbeddingModel::OctenEmbedding0_6BFp32 => [-1.1679014, 1.0701674, 0.56380516, 1.4149448],
         EmbeddingModel::OctenEmbedding0_6BInt4 => [-0.75334597, 1.1573822, 0.30589685, 1.5168501],
-        EmbeddingModel::OctenEmbedding0_6BInt8Full => return Ok(()),
         EmbeddingModel::OctenEmbedding0_6BInt4Full => return Ok(()),
         EmbeddingModel::F2LlmV2_0_6BFp32 => [-0.60010016, -1.2393193, -0.6907619, 1.3460654],
         EmbeddingModel::F2LlmV2_0_6BInt4 => return Ok(()),
@@ -830,10 +829,6 @@ fn test_new_models_semantic_retrieval() {
         (
             EmbeddingModel::OctenEmbedding0_6BInt4,
             "cstr/octen-embedding-0.6b-onnx-int4",
-        ),
-        (
-            EmbeddingModel::OctenEmbedding0_6BInt8Full,
-            "cstr/Octen-Embedding-0.6B-ONNX-INT8-FULL",
         ),
         (
             EmbeddingModel::OctenEmbedding0_6BInt4Full,
