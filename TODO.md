@@ -70,7 +70,10 @@ Embedding models:
 - [!] F2LlmV2_0_6BInt8 (int8_static)— FAIL cos_min 0.119 (QDQ + 14-sentence calib)
 - [!] F2LlmV2_0_6BInt4             — FAIL cos_min 0.640 (MatMulNBits, borderline)
 - [!] F2LlmV2_0_6BInt8Full         — FAIL cos_min 0.212 (MatMul+Gather quantized)
-- [ ] JinaEmbeddingsV3             (mean, task_id=1, XLM-R+LoRA)
+- [!] JinaEmbeddingsV3             HARNESS LIMITATION: AutoModel.forward + mean-pool
+      doesn't match ONNX (cos~0.70). V3 needs the LoRA adapter applied via the
+      sentence-transformers .encode(task=...) API on the HF side. Not a model
+      bug; only FP32 ships (no quants to validate). Park.
 - [!] JinaEmbeddingsV5Nano         BORDERLINE: cos_min=0.557 (one outlier sentence),
       cos_mean=0.921. Other 5/6 sentences pass at cos>0.97. Probably a specific
       sentence's last-token activation gets clipped by INT8. Also fixed a real
@@ -113,7 +116,24 @@ same. Catches Rust-side pooling, normalization, or prompt-template bugs.
 
 ## Phase 6 — triage and ship
 
-- [ ] for every FAIL: decide drop / requantize / fix-pooling; mark in
-      `fastembed-rs-wip/LEARNINGS.md` with the cosine numbers
+- [x] for every FAIL: decided drop / requantize / fix-pooling; recorded in
+      `fastembed-rs-wip/LEARNINGS.md` with cosine numbers
 - [ ] update PR descriptions of PR-a/b/c with the validation table
 - [ ] open follow-up issues for any FAIL we don't fix in this round
+
+## Phase 7 — actually-fix-the-broken-cases
+
+- [ ] Verify `ort = "2.0.0-rc.12"` ships ORT >= 1.23, then bump Cargo.toml
+      to fix HarrierOSSV1_270MQ load failure.
+- [ ] V5 Nano Q: keep with "borderline" note in description; add comment
+      pointing at the single-sentence outlier finding.
+- [ ] Write streaming FP16 converter (avoids the 2 GB protobuf limit by
+      loading proto without external data, walking initializers, and
+      writing tensor-by-tensor to a new external data file).  Convert
+      F2LLM and Octen FP32 → FP16, validate, and ship as new variants
+      `F2LlmV2_0_6BFp16` / `OctenEmbedding0_6BFp16` (1.2 GB each, near-
+      zero quality loss).
+- [ ] SmoothQuant for F2LLM INT8: rewrite the ONNX graph to migrate
+      activation outliers into weights, calibrate on a real corpus,
+      then re-quantize.  Expected to recover INT8 quality to cos > 0.95.
+      Replaces the dropped F2LlmV2_0_6BInt8 with a fixed version.
