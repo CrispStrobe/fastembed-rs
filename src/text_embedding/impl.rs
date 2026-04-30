@@ -329,9 +329,12 @@ impl TextEmbedding {
             // automatically (need_task_id auto-detected from ONNX inputs). Mean pooling
             // over the 3D `text_embeds` output [batch, seq, 1024].
             EmbeddingModel::JinaEmbeddingsV3 => Some(Pooling::Mean),
-            // Jina v5 Nano ships a pre-pooled 'sentence_embedding' output [batch, dim].
-            // Cls on a 2D tensor is a no-op pass-through.
-            EmbeddingModel::JinaEmbeddingsV5Nano => Some(Pooling::Cls),
+            // Jina v5 Nano: 1_Pooling/config.json declares last-token pooling
+            // (it's a EuroBert encoder but the sentence-transformers pipeline
+            // uses last-token, not CLS).  Output is normally read from the
+            // pre-pooled `sentence_embedding` graph output via `output_key`,
+            // so this is the fallback/last_hidden_state pooling.
+            EmbeddingModel::JinaEmbeddingsV5Nano => Some(Pooling::LastToken),
             // Decoder-style models: take the last non-padding token
             EmbeddingModel::OctenEmbedding0_6BFp32 => Some(Pooling::LastToken),
             EmbeddingModel::OctenEmbedding0_6BInt4 => Some(Pooling::LastToken),

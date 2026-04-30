@@ -70,14 +70,17 @@ Embedding models:
 - [!] F2LlmV2_0_6BInt8 (int8_static)— FAIL cos_min 0.119 (QDQ + 14-sentence calib)
 - [!] F2LlmV2_0_6BInt4             — FAIL cos_min 0.640 (MatMulNBits, borderline)
 - [!] F2LlmV2_0_6BInt8Full         — FAIL cos_min 0.212 (MatMul+Gather quantized)
-- [ ] JinaEmbeddingsV3             (mean / task-specific)
-- [ ] JinaEmbeddingsV5Nano         (pre_pooled `sentence_embedding`)
-- [ ] JinaEmbeddingsV5Small        (pre_pooled `sentence_embedding`)
+- [ ] JinaEmbeddingsV3             (mean, task_id=1, XLM-R+LoRA)
+- [!] JinaEmbeddingsV5Nano         BORDERLINE: cos_min=0.557 (one outlier sentence),
+      cos_mean=0.921. Other 5/6 sentences pass at cos>0.97. Probably a specific
+      sentence's last-token activation gets clipped by INT8. Also fixed a real
+      pooling bug: fastembed-rs had Pooling::Cls but the model uses LastToken.
+- [x] JinaEmbeddingsV5Small        PASS cos=1.000 (FP32 only)
 - [x] HarrierOSSV1_270M            PASS cos=1.000 (last_token, sentence_embedding)
 - [!] HarrierOSSV1_270MQ           PASS cos_min=0.99993 BUT requires ORT >= 1.23
       (current ort = 2.0.0-rc.11 ships ORT 1.22 — file fails to load in fastembed-rs).
       Bump ort crate or drop variant.
-- [ ] SnowflakeArcticEmbedMV2      (cls)
+- [x] SnowflakeArcticEmbedMV2      PASS cos_min=0.960 (Q only ships)
 - [x] GteModernBertBase            PASS cos=1.000
 - [x] GteModernBertBaseQ           PASS cos_min=0.943
 - [x] GteModernBertBaseQ4F16       PASS cos_min=0.971
