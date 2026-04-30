@@ -157,12 +157,19 @@ same. Catches Rust-side pooling, normalization, or prompt-template bugs.
    FP16 cos=1.000, SmoothQuant INT8 cos=0.994.  Variants
    `JinaEmbeddingsV5SmallFp16` and `JinaEmbeddingsV5SmallInt8` added.
    Repos: cstr/jina-embeddings-v5-text-small-retrieval-onnx-{fp16,int8}.
-3. Build reranker validation harness (`reranker_diff.py`).  Spearman /
-   Pearson of cross-encoder logits + ranking-order match on a held-out
-   set.  Phase 4 of this plan was never run; PR-c added many quantized
-   reranker variants (LlamaNemotronRerank1BV2Int8, MxbaiRerank*Q,
-   ZerankSmall{Int8,Int4}, JINARerankerV2BaseMultilingual{Int8,Fp16},
-   GteRerankerModernBertBase{Q,Q4F16}) — none of those are verified vs HF.
+3. Reranker validation harness (`scripts/reranker_diff.py`): **DONE.**
+   Validated `GteRerankerModernBertBase` family on a 4-query test set:
+     - FP32 PASS,
+     - Q (INT8) Spearman 0.96 overall but 1.0 / 0.8 split English / German;
+       kept with English-only marker,
+     - Q4F16 fails to load in ORT; **DROPPED**.
+   Remaining unvalidated reranker quants in PR-c (need their ONNX
+   downloaded first):
+     - LlamaNemotronRerank1BV2{Int8,Int4Full}    (cstr/llama-nemotron-rerank-1b-v2-ONNX)
+     - MxbaiRerank{Xsmall,Base,Large}V1Q
+     - ZerankSmall{Int8,Int4}
+     - JINARerankerV2BaseMultilingual{Int8,Fp16}
+     - MsMarcoMiniLM{L6,L12}V2  (FP32 only, no quants ship)
 4. Run the full `cargo test` suite (with downloads enabled) on the
    re-added variants once the F2LLM FP16 upload finishes.
 5. ort crate migration rc.11 → rc.12 to re-enable HarrierOSSV1_270MQ
