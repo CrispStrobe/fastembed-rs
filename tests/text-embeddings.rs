@@ -116,9 +116,13 @@ fn verify_embeddings(model: &EmbeddingModel, embeddings: &[Embedding]) -> Result
         EmbeddingModel::JinaEmbeddingsV5Small => [0.91580373, 0.46739948, -1.1745838, 1.3157014],
         EmbeddingModel::Qwen3Embedding0_6BUint8 => return Ok(()),
         EmbeddingModel::OctenEmbedding0_6BFp32 => [-1.1679014, 1.0701674, 0.56380516, 1.4149448],
+        EmbeddingModel::OctenEmbedding0_6BFp16 => return Ok(()),
+        EmbeddingModel::OctenEmbedding0_6BInt8 => return Ok(()),
         EmbeddingModel::OctenEmbedding0_6BInt4 => [-0.75334597, 1.1573822, 0.30589685, 1.5168501],
         EmbeddingModel::OctenEmbedding0_6BInt4Full => return Ok(()),
         EmbeddingModel::F2LlmV2_0_6BFp32 => [-0.60010016, -1.2393193, -0.6907619, 1.3460654],
+        EmbeddingModel::F2LlmV2_0_6BFp16 => return Ok(()),
+        EmbeddingModel::F2LlmV2_0_6BInt8 => return Ok(()),
         EmbeddingModel::F2LlmV2_0_6BInt4 => return Ok(()),
         EmbeddingModel::HarrierOSSV1_270M => [-1.2506653, -0.398214, -0.32943717, -1.5022918],
         _ => panic!("Model {model} not found. If you have just inserted this `EmbeddingModel` variant, please update the expected embeddings."),
@@ -822,9 +826,14 @@ fn test_new_models_semantic_retrieval() {
             EmbeddingModel::OctenEmbedding0_6BFp32,
             "cstr/Octen-Embedding-0.6B-ONNX",
         ),
-        // OctenEmbedding0_6BInt8 is omitted here: per-tensor dynamic INT8 quantization
-        // produces high embedding anisotropy on Linux x86 (ORT accumulates INT8 differently),
-        // which can invert semantic ordering despite the model loading correctly.
+        (
+            EmbeddingModel::OctenEmbedding0_6BFp16,
+            "cstr/Octen-Embedding-0.6B-ONNX-FP16",
+        ),
+        (
+            EmbeddingModel::OctenEmbedding0_6BInt8,
+            "cstr/Octen-Embedding-0.6B-ONNX-INT8",
+        ),
         (
             EmbeddingModel::OctenEmbedding0_6BInt4,
             "cstr/octen-embedding-0.6b-onnx-int4",
@@ -834,6 +843,14 @@ fn test_new_models_semantic_retrieval() {
             "cstr/Octen-Embedding-0.6B-ONNX-INT4-FULL",
         ),
         (EmbeddingModel::F2LlmV2_0_6BFp32, "cstr/F2LLM-v2-0.6B-ONNX"),
+        (
+            EmbeddingModel::F2LlmV2_0_6BFp16,
+            "cstr/F2LLM-v2-0.6B-ONNX-FP16",
+        ),
+        (
+            EmbeddingModel::F2LlmV2_0_6BInt8,
+            "cstr/F2LLM-v2-0.6B-ONNX-INT8",
+        ),
         (
             EmbeddingModel::F2LlmV2_0_6BInt4,
             "cstr/F2LLM-v2-0.6B-ONNX-INT4",

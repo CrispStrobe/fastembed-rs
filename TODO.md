@@ -139,17 +139,44 @@ same. Catches Rust-side pooling, normalization, or prompt-template bugs.
       → 3.1× quality improvement vs vanilla INT8 (0.30 → 0.93).
 - [~] Octen SmoothQuant INT8: running with alpha=0.8.
 
-## Phase 8 — re-upload and re-add variants
+## Phase 8 — re-upload and re-add variants  (done)
 
-Verified-quality artifacts on disk:
-  /Volumes/backups/ai/fastembed-rs-wip/f2llm_work/onnx_fp16/
-  /Volumes/backups/ai/fastembed-rs-wip/f2llm_work/onnx_smoothed_a08_int8/
-  /Volumes/backups/ai/fastembed-rs-wip/octen_work/onnx_fp16/
-  /Volumes/backups/ai/fastembed-rs-wip/octen_work/onnx_smoothed_a08_int8/  (pending)
+- [x] Upload F2LLM SmoothQuant INT8 → cstr/F2LLM-v2-0.6B-ONNX-INT8
+- [~] Upload F2LLM FP16 → cstr/F2LLM-v2-0.6B-ONNX-FP16          (in progress, 1.2 GB)
+- [x] Upload Octen FP16 → cstr/Octen-Embedding-0.6B-ONNX-FP16
+- [x] Upload Octen SmoothQuant INT8 → cstr/Octen-Embedding-0.6B-ONNX-INT8
+- [x] Re-add F2LlmV2_0_6BFp16, F2LlmV2_0_6BInt8, OctenEmbedding0_6BFp16,
+      OctenEmbedding0_6BInt8 to fastembed-rs source.
 
-- [ ] Upload F2LLM FP16 → cstr/F2LLM-v2-0.6B-ONNX-FP16
-- [ ] Upload F2LLM SmoothQuant INT8 → cstr/F2LLM-v2-0.6B-ONNX-INT8
-- [ ] Upload Octen FP16 → cstr/Octen-Embedding-0.6B-ONNX-FP16
-- [ ] Upload Octen SmoothQuant INT8 → cstr/Octen-Embedding-0.6B-ONNX-INT8
-- [ ] Re-add `F2LlmV2_0_6BFp16`, `F2LlmV2_0_6BInt8`, `OctenEmbedding0_6BFp16`,
-      `OctenEmbedding0_6BInt8` to fastembed-rs source.
+## Phase 9 — open work, prioritized
+
+1. F2LlmV2_0_6BInt4 (cos=0.64) disposition.  Either drop, or rebuild via
+   SmoothQuant + INT4 MatMulNBits (the same outlier-migration applied to
+   group-quantization should reach ≥0.93).
+2. JinaEmbeddingsV5Small: same Qwen3 architecture as F2LLM/Octen.  Apply
+   the FP16 + SmoothQuant INT8 recipe; ship as `JinaEmbeddingsV5SmallFp16`
+   and `JinaEmbeddingsV5SmallInt8`.  Currently FP32 only at 2.5 GB.
+3. Build reranker validation harness (`reranker_diff.py`).  Spearman /
+   Pearson of cross-encoder logits + ranking-order match on a held-out
+   set.  Phase 4 of this plan was never run; PR-c added many quantized
+   reranker variants (LlamaNemotronRerank1BV2Int8, MxbaiRerank*Q,
+   ZerankSmall{Int8,Int4}, JINARerankerV2BaseMultilingual{Int8,Fp16},
+   GteRerankerModernBertBase{Q,Q4F16}) — none of those are verified vs HF.
+4. Run the full `cargo test` suite (with downloads enabled) on the
+   re-added variants once the F2LLM FP16 upload finishes.
+5. ort crate migration rc.11 → rc.12 to re-enable HarrierOSSV1_270MQ
+   (currently dropped because rc.11 ships ORT 1.22 < required 1.23).
+   ~136 source-compat errors to fix.
+6. Update PR descriptions (`feat/new-model-entries` plus PR-a/b if
+   relevant) with the validation table and the SmoothQuant story.
+7. V5 Nano Q outlier investigation: cos_min 0.557 on a single sentence,
+   cos_mean 0.921 on the rest.  Likely a single-sentence quantization
+   pathology; may go away with a larger probe set.
+8. JinaEmbeddingsV3 sentence-transformers harness so we can validate it
+   too (V3 needs `.encode(task='retrieval.passage')`, not bare
+   AutoModel.forward + mean pool).
+9. Apply SmoothQuant + FP16 to other Qwen3-derived embedders we haven't
+   touched yet — same architecture, same recipe should work.
+10. Open issues on the upstream Anush008/fastembed-rs for findings that
+    affect them too (the validation harness itself, the V5 Nano pooling
+    bug if/when V5 Nano lands upstream).

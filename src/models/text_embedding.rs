@@ -137,6 +137,15 @@ pub enum EmbeddingModel {
     // ── Octen-Embedding-0.6B (Qwen3-0.6B fine-tune, decoder, last-token pooling) ──
     /// cstr/Octen-Embedding-0.6B-ONNX — FP32 reference (2.4 GB, external data)
     OctenEmbedding0_6BFp32,
+    /// cstr/Octen-Embedding-0.6B-ONNX-FP16 — FP16 weights via streaming converter
+    /// (W8A16-style: weights FP16, activations FP32 via Cast nodes); cos≈1.000
+    /// vs PyTorch reference (~1.2 GB, 50% memory of FP32).
+    OctenEmbedding0_6BFp16,
+    /// cstr/Octen-Embedding-0.6B-ONNX-INT8 — SmoothQuant (alpha=0.8) +
+    /// per-channel dynamic INT8; cos≈0.987 vs PyTorch reference (~1.06 GB).
+    /// Vanilla quantize_dynamic on this Qwen3 architecture collapses cos to
+    /// ~0.6; SmoothQuant migrates outliers into weights to recover quality.
+    OctenEmbedding0_6BInt8,
     /// cstr/octen-embedding-0.6b-onnx-int4 — INT4 MatMulNBits block=32 (~0.9 GB)
     OctenEmbedding0_6BInt4,
     /// cstr/Octen-Embedding-0.6B-ONNX-INT4-FULL — INT4 MatMul + INT8 Gather (~434 MB)
@@ -145,11 +154,18 @@ pub enum EmbeddingModel {
     // ── F2LLM-v2-0.6B (Qwen3-1024d fine-tune, decoder, last-token pooling) ──────
     /// cstr/F2LLM-v2-0.6B-ONNX — FP32 reference (2.4 GB, external data)
     F2LlmV2_0_6BFp32,
+    /// cstr/F2LLM-v2-0.6B-ONNX-FP16 — FP16 weights via streaming converter
+    /// (W8A16-style); cos=1.000 vs PyTorch reference (~1.2 GB, 50% smaller).
+    F2LlmV2_0_6BFp16,
+    /// cstr/F2LLM-v2-0.6B-ONNX-INT8 — SmoothQuant (alpha=0.8) + per-channel
+    /// dynamic INT8; cos≈0.93 vs PyTorch reference (~1.06 GB). Replaces an
+    /// earlier vanilla-INT8 export that collapsed to cos≈0.30 due to Qwen3
+    /// activation outliers.
+    F2LlmV2_0_6BInt8,
     /// cstr/F2LLM-v2-0.6B-ONNX-INT4 — INT4 MatMulNBits block=32 (~0.9 GB).
-    /// Quality is borderline (cos_min ≈0.64 vs HF/PyTorch); top-1 retrieval
-    /// preserved on simple sets but per-sentence cosine drift is significant.
-    /// Decoder LLMs need group/AWQ-style quantization plus outlier handling
-    /// to fully recover; this is the best of the available F2LLM quants.
+    /// Quality is reduced (cos_min ≈0.64 vs HF/PyTorch); top-1 retrieval
+    /// preserved but per-sentence cosine drift is significant. Prefer
+    /// `F2LlmV2_0_6BInt8` (SmoothQuant) when memory permits ~1.06 GB.
     F2LlmV2_0_6BInt4,
 
     // ── Jina Embeddings v5 text-small (Qwen3-0.6B, 1024d, last-token pooling) ──
@@ -702,6 +718,33 @@ fn init_models_map() -> HashMap<EmbeddingModel, ModelInfo<EmbeddingModel>> {
             output_key: None,
         },
         ModelInfo {
+            model: EmbeddingModel::OctenEmbedding0_6BFp16,
+            dim: 1024,
+            description: String::from(
+                "Octen-Embedding-0.6B FP16 — 1024d, 32k context, last-token pooling. Streaming \
+                 FP32→FP16 export (W8A16-style: weights FP16, activations FP32 via Cast nodes); \
+                 cos=1.000 vs PyTorch reference, ~1.2 GB (50% memory of FP32).",
+            ),
+            model_code: String::from("cstr/Octen-Embedding-0.6B-ONNX-FP16"),
+            model_file: String::from("model.fp16.onnx"),
+            additional_files: vec!["model.fp16.onnx.data".to_string()],
+            output_key: None,
+        },
+        ModelInfo {
+            model: EmbeddingModel::OctenEmbedding0_6BInt8,
+            dim: 1024,
+            description: String::from(
+                "Octen-Embedding-0.6B INT8 — 1024d, 32k context, last-token pooling. \
+                 SmoothQuant (alpha=0.8) + per-channel dynamic INT8; cos≈0.987 vs PyTorch \
+                 reference, ~1.06 GB.  Vanilla INT8 collapses on this Qwen3 architecture; \
+                 SmoothQuant migrates activation outliers into weights to recover quality.",
+            ),
+            model_code: String::from("cstr/Octen-Embedding-0.6B-ONNX-INT8"),
+            model_file: String::from("model.int8.onnx"),
+            additional_files: vec!["model.int8.onnx.data".to_string()],
+            output_key: None,
+        },
+        ModelInfo {
             model: EmbeddingModel::OctenEmbedding0_6BInt4,
             dim: 1024,
             description: String::from(
@@ -733,6 +776,34 @@ fn init_models_map() -> HashMap<EmbeddingModel, ModelInfo<EmbeddingModel>> {
             model_code: String::from("cstr/F2LLM-v2-0.6B-ONNX"),
             model_file: String::from("model.onnx"),
             additional_files: vec!["model.onnx.data".to_string()],
+            output_key: None,
+        },
+        ModelInfo {
+            model: EmbeddingModel::F2LlmV2_0_6BFp16,
+            dim: 1024,
+            description: String::from(
+                "F2LLM-v2-0.6B FP16 — 1024d, 32k context, last-token pooling. Streaming \
+                 FP32→FP16 export (W8A16-style); cos=1.000 vs PyTorch reference, ~1.2 GB \
+                 (50% memory of FP32).",
+            ),
+            model_code: String::from("cstr/F2LLM-v2-0.6B-ONNX-FP16"),
+            model_file: String::from("model.fp16.onnx"),
+            additional_files: vec!["model.fp16.onnx.data".to_string()],
+            output_key: None,
+        },
+        ModelInfo {
+            model: EmbeddingModel::F2LlmV2_0_6BInt8,
+            dim: 1024,
+            description: String::from(
+                "F2LLM-v2-0.6B INT8 — 1024d, 32k context, last-token pooling. \
+                 SmoothQuant (alpha=0.8) + per-channel dynamic INT8; cos≈0.93 vs PyTorch \
+                 reference, ~1.06 GB.  Vanilla quantize_dynamic collapses to cos≈0.30 on \
+                 Qwen3-class decoder LLMs due to activation outliers; SmoothQuant migrates \
+                 those outliers into the weights so standard INT8 then works.",
+            ),
+            model_code: String::from("cstr/F2LLM-v2-0.6B-ONNX-INT8"),
+            model_file: String::from("model.int8.onnx"),
+            additional_files: vec!["model.int8.onnx.data".to_string()],
             output_key: None,
         },
         ModelInfo {
