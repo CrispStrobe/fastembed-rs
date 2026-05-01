@@ -158,17 +158,31 @@ same. Catches Rust-side pooling, normalization, or prompt-template bugs.
    `JinaEmbeddingsV5SmallFp16` and `JinaEmbeddingsV5SmallInt8` added.
    Repos: cstr/jina-embeddings-v5-text-small-retrieval-onnx-{fp16,int8}.
 3. Reranker validation harness (`scripts/reranker_diff.py`): **DONE.**
-   Validated so far:
-     - GteRerankerModernBertBase  FP32 PASS
-       GteRerankerModernBertBaseQ Q (INT8) 1.0 / 0.8 English/German split,
-                                  kept with English-only marker.
-       GteRerankerModernBertBaseQ4F16 fails to load in ORT; **DROPPED**.
-     - MxbaiRerankXsmallV1   FP32 PASS, Q PASS (Spearman 0.994 multilingual)
+   Per-variant findings (all on the same 4-query / 16-pair set, with
+   English + German queries):
+
+   | Variant                              | Spearman | per-group     | top1 vs FP32 | Note |
+   |--------------------------------------|----------|---------------|--------------|------|
+   | GteRerankerModernBertBase            | 1.000    | 1/1/1/1       | match        | PASS (FP32) |
+   | GteRerankerModernBertBaseQ           | 0.959    | 1/1/0.8/0.8   | diverge (DE) | English-only note kept |
+   | GteRerankerModernBertBaseQ4F16       | —        | —             | won't load   | **DROPPED** |
+   | MxbaiRerankXsmallV1                  | 1.000    | 1/1/1/1       | match        | PASS (FP32) |
+   | MxbaiRerankXsmallV1Q                 | 0.994    | 1/1/1/1       | match        | PASS (multilingual-clean) |
+   | MxbaiRerankBaseV1                    | 1.000    | 1/1/1/1       | match        | PASS (FP32; FP32 itself is English-biased) |
+   | MxbaiRerankBaseV1Q                   | 0.938    | 1/1/0.8/1     | 1 group diff | borderline |
+   | MxbaiRerankLargeV1                   | 1.000    | 1/1/1/1       | match        | PASS (FP32; English-biased) |
+   | MxbaiRerankLargeV1Q                  | 0.918    | 1/1/0.8/0.8   | 2 groups diff| borderline |
+
+   Pattern: Mxbai-Xsmall and Jina-style multilingual rerankers handle
+   INT8 cleanly; ModernBERT and Mxbai Base/Large Q variants shift
+   ranking on non-English queries. Disposition for Mxbai Base/Large Q
+   is a judgment call (FP32 itself was English-biased; Q just shifts
+   in a different direction).
+
    Still unvalidated (need ONNX downloads):
-     - MxbaiRerank{Base,Large}V1Q
-     - LlamaNemotronRerank1BV2{Int8,Int4Full}
-     - ZerankSmall{Int8,Int4}
-     - JINARerankerV2BaseMultilingual{Int8,Fp16}
+     - LlamaNemotronRerank1BV2{Int8,Int4Full}    (~4 GB)
+     - ZerankSmall{Int8,Int4}                    (Qwen3-1.7B, ~3 GB)
+     - JINARerankerV2BaseMultilingual{Int8,Fp16} (downloading)
      - MsMarcoMiniLM{L6,L12}V2  (FP32 only — no quants ship)
 4. Run the full `cargo test` suite (with downloads enabled) on the
    re-added variants once the F2LLM FP16 upload finishes.
