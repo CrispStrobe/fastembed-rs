@@ -185,15 +185,15 @@ same. Catches Rust-side pooling, normalization, or prompt-template bugs.
    | LlamaNemotronRerank1BV2               | 1.000    | [1,1,1,1]     | match        | PASS (FP32) |
    | **LlamaNemotronRerank1BV2Int8**       | 0.494    | [1,**−0.4**,0.8,0.4] | diverge | **DROPPED** (catastrophic outlier collapse) |
    | LlamaNemotronRerank1BV2Int4Full       | 0.944    | [0.8,1,1,0.8] | match        | PASS |
-   | ZerankSmall (FP32 ONNX)               | —        | —             | —            | model has batch=1 hardcode in attn-mask broadcast |
-   | ZerankSmallInt8                       | 0.965    | [0.8,1,0.8,0.8] | diverge    | borderline; batch=1 bug |
-   | ZerankSmallInt4                       | 0.935    | [0.8,1,**0.2**,1] | diverge   | borderline; batch=1 bug; group 2 nearly random |
+   | ZerankSmall (FP32 ONNX)               | —        | —             | —            | **DROPPED** (batch=1 hardcode; And kernel can't broadcast against batch>1) |
+   | ZerankSmallInt8                       | 0.965    | [0.8,1,0.8,0.8] | diverge    | **DROPPED** (same export bug; quality OK) |
+   | ZerankSmallInt4                       | 0.935    | [0.8,1,**0.2**,1] | diverge   | **DROPPED** (same export bug; group 2 nearly random) |
 
-   Zerank's underlying ONNX export has a fixed-batch bug that affects
-   ALL variants (FP32 / Int8 / Int4) — they error with "Shape mismatch
-   {1,1,T,T} != {B,1,T,T}" when called with batch > 1.  Either drop all
-   Zerank variants, or document that they require batch-1 inference
-   (callers can loop), or re-export the model with proper dynamic axes.
+   All three Zerank variants dropped: fastembed-rs default batch is 256,
+   the ONNX errors at batch>1.  Re-add once an export with proper
+   dynamic batch axes is published (the model author would need to
+   re-export with `dynamic_axes={'input_ids':{0:'batch'},...}`
+   consistently across all internal mask construction).
 
    Done. Remaining unvalidated rerankers ship FP32-only (no quants):
      - MsMarcoMiniLM{L6,L12}V2
