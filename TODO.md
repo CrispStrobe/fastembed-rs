@@ -179,10 +179,13 @@ same. Catches Rust-side pooling, normalization, or prompt-template bugs.
    is a judgment call (FP32 itself was English-biased; Q just shifts
    in a different direction).
 
+   | JINARerankerV2BaseMultiligual         | 1.000    | [1,1,1,1]     | match        | PASS (FP32) |
+   | JINARerankerV2BaseMultilingualInt8    | 0.971    | [1,1,0.8,1]   | match        | PASS |
+   | JINARerankerV2BaseMultilingualFp16    | —        | —             | won't load   | **DROPPED** (same SimplifiedLayerNormFusion as GteQ4F16) |
+
    Still unvalidated (need ONNX downloads):
      - LlamaNemotronRerank1BV2{Int8,Int4Full}    (~4 GB)
      - ZerankSmall{Int8,Int4}                    (Qwen3-1.7B, ~3 GB)
-     - JINARerankerV2BaseMultilingual{Int8,Fp16} (downloading)
      - MsMarcoMiniLM{L6,L12}V2  (FP32 only — no quants ship)
 4. Run the full `cargo test` suite (with downloads enabled) on the
    re-added variants once the F2LLM FP16 upload finishes.
