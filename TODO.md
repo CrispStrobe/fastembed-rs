@@ -182,11 +182,21 @@ same. Catches Rust-side pooling, normalization, or prompt-template bugs.
    | JINARerankerV2BaseMultiligual         | 1.000    | [1,1,1,1]     | match        | PASS (FP32) |
    | JINARerankerV2BaseMultilingualInt8    | 0.971    | [1,1,0.8,1]   | match        | PASS |
    | JINARerankerV2BaseMultilingualFp16    | —        | —             | won't load   | **DROPPED** (same SimplifiedLayerNormFusion as GteQ4F16) |
+   | LlamaNemotronRerank1BV2               | 1.000    | [1,1,1,1]     | match        | PASS (FP32) |
+   | **LlamaNemotronRerank1BV2Int8**       | 0.494    | [1,**−0.4**,0.8,0.4] | diverge | **DROPPED** (catastrophic outlier collapse) |
+   | LlamaNemotronRerank1BV2Int4Full       | 0.944    | [0.8,1,1,0.8] | match        | PASS |
+   | ZerankSmall (FP32 ONNX)               | —        | —             | —            | model has batch=1 hardcode in attn-mask broadcast |
+   | ZerankSmallInt8                       | 0.965    | [0.8,1,0.8,0.8] | diverge    | borderline; batch=1 bug |
+   | ZerankSmallInt4                       | 0.935    | [0.8,1,**0.2**,1] | diverge   | borderline; batch=1 bug; group 2 nearly random |
 
-   Still unvalidated (need ONNX downloads):
-     - LlamaNemotronRerank1BV2{Int8,Int4Full}    (~4 GB)
-     - ZerankSmall{Int8,Int4}                    (Qwen3-1.7B, ~3 GB)
-     - MsMarcoMiniLM{L6,L12}V2  (FP32 only — no quants ship)
+   Zerank's underlying ONNX export has a fixed-batch bug that affects
+   ALL variants (FP32 / Int8 / Int4) — they error with "Shape mismatch
+   {1,1,T,T} != {B,1,T,T}" when called with batch > 1.  Either drop all
+   Zerank variants, or document that they require batch-1 inference
+   (callers can loop), or re-export the model with proper dynamic axes.
+
+   Done. Remaining unvalidated rerankers ship FP32-only (no quants):
+     - MsMarcoMiniLM{L6,L12}V2
 4. Run the full `cargo test` suite (with downloads enabled) on the
    re-added variants once the F2LLM FP16 upload finishes.
 5. ort crate migration rc.11 → rc.12 to re-enable HarrierOSSV1_270MQ
