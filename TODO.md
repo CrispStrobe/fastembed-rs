@@ -185,15 +185,18 @@ same. Catches Rust-side pooling, normalization, or prompt-template bugs.
    | LlamaNemotronRerank1BV2               | 1.000    | [1,1,1,1]     | match        | PASS (FP32) |
    | **LlamaNemotronRerank1BV2Int8**       | 0.494    | [1,**−0.4**,0.8,0.4] | diverge | **DROPPED** (catastrophic outlier collapse) |
    | LlamaNemotronRerank1BV2Int4Full       | 0.944    | [0.8,1,1,0.8] | match        | PASS |
-   | ZerankSmall (FP32 ONNX)               | —        | —             | —            | **DROPPED** (batch=1 hardcode; And kernel can't broadcast against batch>1) |
-   | ZerankSmallInt8                       | 0.965    | [0.8,1,0.8,0.8] | diverge    | **DROPPED** (same export bug; quality OK) |
-   | ZerankSmallInt4                       | 0.935    | [0.8,1,**0.2**,1] | diverge   | **DROPPED** (same export bug; group 2 nearly random) |
+   | ZerankSmall (FP32 ONNX, batch-fixed)  | —        | —             | reference    | re-uploaded with batch-broadcast patch |
+   | ZerankSmallInt8 (batch-fixed)         | 0.965    | [0.8,1,0.8,0.8] | diverge    | PASS (quality OK; works at batch>1 now) |
+   | ZerankSmallInt4 (batch-fixed)         | 0.935    | [0.8,1,**0.2**,1] | diverge   | PASS (quality OK; works at batch>1 now) |
 
-   All three Zerank variants dropped: fastembed-rs default batch is 256,
-   the ONNX errors at batch>1.  Re-add once an export with proper
-   dynamic batch axes is published (the model author would need to
-   re-export with `dynamic_axes={'input_ids':{0:'batch'},...}`
-   consistently across all internal mask construction).
+   Zerank fix: the original cstr/zerank-1-small-ONNX exports had a
+   hardcoded batch=1 attention-mask broadcast that ORT's And kernel
+   refused to broadcast against batch > 1.  scripts/fix_zerank_batch.py
+   inserts an Expand+Shape pair before the bad And so the [1,1,T,T]
+   tensor is broadcast to [B,1,T,T] at runtime, and drops the stale
+   value_info entries that pre-allocated batch=1 buffers.  Re-uploaded
+   to cstr/zerank-1-small-ONNX (overwrites the broken export).
+   Re-added the 3 variants to fastembed-rs source.
 
    Done. Remaining unvalidated rerankers ship FP32-only (no quants):
      - MsMarcoMiniLM{L6,L12}V2

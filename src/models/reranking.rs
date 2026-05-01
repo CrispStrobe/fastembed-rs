@@ -46,6 +46,13 @@ pub enum RerankerModel {
     /// drops to ~0.8 on non-English queries.  ModernBERT is English-trained,
     /// so this is consistent with the underlying model's design.
     GteRerankerModernBertBaseQ,
+    // ── zeroentropy/zerank-1-small (Qwen3 1.7B reranker, multilingual) ────────
+    /// zeroentropy/zerank-1-small — 1.7B Qwen3 reranker, multilingual (FP16, ~3.4 GB)
+    ZerankSmall,
+    /// zeroentropy/zerank-1-small — INT8 weight-only quantized (~2.5 GB)
+    ZerankSmallInt8,
+    /// zeroentropy/zerank-1-small — INT4 MatMulNBits quantized (~1.4 GB)
+    ZerankSmallInt4,
 }
 
 pub fn reranker_model_list() -> Vec<RerankerModelInfo> {
@@ -215,6 +222,51 @@ pub fn reranker_model_list() -> Vec<RerankerModelInfo> {
             model_file: String::from("model_int4_full.onnx"),
             additional_files: vec![],
             prompt_template: None,
+        },
+        // ── zeroentropy/zerank-1-small ────────────────────────────────────────
+        // The originally-published exports had a hardcoded batch=1 in the
+        // attention-mask broadcast (the And kernel can't broadcast {1,1,T,T}
+        // against {B,1,T,T}).  All three variants here are the patched
+        // re-uploads (Expand + Shape inserted before the And, stale
+        // value_info entries dropped) and work at any batch size.
+        RerankerModelInfo {
+            model: RerankerModel::ZerankSmall,
+            description: String::from(
+                "zeroentropy/zerank-1-small — 1.7B Qwen3 reranker, multilingual (FP32 ONNX, ~3.4 GB; \
+                 batch-broadcast patched)",
+            ),
+            model_code: String::from("cstr/zerank-1-small-ONNX"),
+            model_file: String::from("model.onnx"),
+            additional_files: vec![String::from("model.onnx_data")],
+            prompt_template: Some(String::from(
+                "<|im_start|>user\nQuery: {query}\nDocument: {doc}\nRelevant:<|im_end|>\n<|im_start|>assistant\n",
+            )),
+        },
+        RerankerModelInfo {
+            model: RerankerModel::ZerankSmallInt8,
+            description: String::from(
+                "zeroentropy/zerank-1-small — 1.7B Qwen3 reranker, multilingual (INT8, ~2.5 GB; \
+                 Spearman 0.96 vs FP32 ONNX; batch-broadcast patched)",
+            ),
+            model_code: String::from("cstr/zerank-1-small-ONNX"),
+            model_file: String::from("model_int8.onnx"),
+            additional_files: vec![String::from("model_int8.onnx_data")],
+            prompt_template: Some(String::from(
+                "<|im_start|>user\nQuery: {query}\nDocument: {doc}\nRelevant:<|im_end|>\n<|im_start|>assistant\n",
+            )),
+        },
+        RerankerModelInfo {
+            model: RerankerModel::ZerankSmallInt4,
+            description: String::from(
+                "zeroentropy/zerank-1-small — 1.7B Qwen3 reranker, multilingual (INT4 MatMulNBits, ~1.4 GB; \
+                 Spearman 0.94 vs FP32 ONNX; batch-broadcast patched)",
+            ),
+            model_code: String::from("cstr/zerank-1-small-ONNX"),
+            model_file: String::from("model_int4_full.onnx"),
+            additional_files: vec![],
+            prompt_template: Some(String::from(
+                "<|im_start|>user\nQuery: {query}\nDocument: {doc}\nRelevant:<|im_end|>\n<|im_start|>assistant\n",
+            )),
         },
     ];
     reranker_model_list
