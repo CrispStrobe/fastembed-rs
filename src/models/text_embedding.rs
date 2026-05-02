@@ -68,6 +68,9 @@ pub enum EmbeddingModel {
     GTELargeENV15,
     /// Quantized Alibaba-NLP/gte-large-en-v1.5
     GTELargeENV15Q,
+    // ── GTE ModernBERT ──────────────────────────────────────────────────────
+    /// Alibaba-NLP/gte-modernbert-base — 149M, 768d, 8192 tokens, CLS pooling (FP32, 596 MB)
+    GteModernBertBase,
     /// Qdrant/clip-ViT-B-32-text
     ClipVitB32,
     /// jinaai/jina-embeddings-v2-base-code
@@ -98,11 +101,9 @@ pub enum EmbeddingModel {
     SnowflakeArcticEmbedLQ,
 
     // ── Octen-Embedding-0.6B (Qwen3-0.6B fine-tune, decoder, last-token pooling) ──
-    /// CrispStrobe/octen-embedding-0.6b-onnx — FP32 reference (2.4 GB, external data)
+    /// cstr/Octen-Embedding-0.6B-ONNX — FP32 reference (2.4 GB, external data)
     OctenEmbedding0_6BFp32,
-    /// CrispStrobe/octen-embedding-0.6b-onnx-int8 — INT8 per-channel (1.1 GB, recommended)
-    OctenEmbedding0_6BInt8,
-    /// CrispStrobe/octen-embedding-0.6b-onnx-int4 — INT4 MatMulNBits (0.9 GB, minimum RAM)
+    /// cstr/octen-embedding-0.6b-onnx-int4 — INT4 MatMulNBits block=32 (~0.9 GB)
     OctenEmbedding0_6BInt4,
 
     // ── Qwen3-Embedding-0.6B calibrated uint8 ────────────────────────────────────
@@ -116,10 +117,31 @@ pub enum EmbeddingModel {
     // ── PIXIE-Rune-v1.0 ──────────────────────────────────────────────────────────
     /// telepix/PIXIE-Rune-v1.0 — 1024d, 74 languages, 6k context (external data)
     PixieRuneV1,
+    /// INT4 (MatMul) + INT8 (embeddings) quantized telepix/PIXIE-Rune-v1.0 — 1024d, 74 languages, 6k context
+    PixieRuneV1Int4,
+    /// Fully INT4 quantized telepix/PIXIE-Rune-v1.0 — INT4 MatMul + INT4 word embeddings, 337 MB
+    PixieRuneV1Int4Full,
+
+    // ── Jina Embeddings v3 ──────────────────────────────────────────────────
+    /// jinaai/jina-embeddings-v3 — 1024d, 8k context, XLM-R + LoRA task adapters
+    JinaEmbeddingsV3,
 
     // ── Jina Embeddings v5 Nano ───────────────────────────────────────────────────
     /// jinaai/jina-embeddings-v5-text-nano-retrieval — 768d, 32k context (external data)
     JinaEmbeddingsV5Nano,
+
+    // ── Jina Embeddings v5 text-small (Qwen3-0.6B, 1024d, last-token pooling) ──
+    /// jinaai/jina-embeddings-v5-text-small-retrieval — 677M, 1024d, 32k context, multilingual.
+    /// Prepend "Query: " to queries and "Document: " to documents for retrieval.
+    JinaEmbeddingsV5Small,
+
+    // ── F2LLM-v2-0.6B (Qwen3-1024d fine-tune, decoder, last-token pooling) ──────
+    /// cstr/F2LLM-v2-0.6B-ONNX — FP32 reference (2.4 GB, external data)
+    F2LlmV2_0_6BFp32,
+
+    // ── Microsoft Harrier OSS v1 270M (decoder-only, last-token pooling) ─────
+    /// onnx-community/harrier-oss-v1-270m-ONNX — 640d, multilingual, decoder-only architecture
+    HarrierOSSV1_270M,
 }
 
 /// Centralized function to initialize the models map.
@@ -406,6 +428,18 @@ fn init_models_map() -> HashMap<EmbeddingModel, ModelInfo<EmbeddingModel>> {
             additional_files: Vec::new(),
             output_key: None,
         },
+        // ── GTE ModernBERT ─────────────────────────────────────────────────
+        ModelInfo {
+            model: EmbeddingModel::GteModernBertBase,
+            dim: 768,
+            description: String::from(
+                "gte-modernbert-base — 149M, 768d, 8192 tokens, English, CLS pooling (FP32, 596 MB)",
+            ),
+            model_code: String::from("Alibaba-NLP/gte-modernbert-base"),
+            model_file: String::from("onnx/model.onnx"),
+            additional_files: Vec::new(),
+            output_key: None,
+        },
         ModelInfo {
             model: EmbeddingModel::ClipVitB32,
             dim: 512,
@@ -534,6 +568,29 @@ fn init_models_map() -> HashMap<EmbeddingModel, ModelInfo<EmbeddingModel>> {
             additional_files: Vec::new(),
             output_key: None,
         },
+        // ── Octen-Embedding-0.6B ─────────────────────────────────────────────────
+        ModelInfo {
+            model: EmbeddingModel::OctenEmbedding0_6BFp32,
+            dim: 1024,
+            description: String::from(
+                "Octen-Embedding-0.6B FP32 — 1024d, 32k context, last-token pooling (external data, 2.4 GB)",
+            ),
+            model_code: String::from("cstr/Octen-Embedding-0.6B-ONNX"),
+            model_file: String::from("model.onnx"),
+            additional_files: vec!["model.onnx.data".to_string()],
+            output_key: None,
+        },
+        ModelInfo {
+            model: EmbeddingModel::OctenEmbedding0_6BInt4,
+            dim: 1024,
+            description: String::from(
+                "Octen-Embedding-0.6B INT4 — 1024d, 32k context, last-token pooling (MatMulNBits, external data, ~0.9 GB)",
+            ),
+            model_code: String::from("cstr/octen-embedding-0.6b-onnx-int4"),
+            model_file: String::from("model.int4.onnx"),
+            additional_files: vec!["model.int4.onnx.data".to_string()],
+            output_key: None,
+        },
         // ── Qwen3-Embedding calibrated uint8 ─────────────────────────────────────
         ModelInfo {
             model: EmbeddingModel::Qwen3Embedding0_6BUint8,
@@ -571,6 +628,79 @@ fn init_models_map() -> HashMap<EmbeddingModel, ModelInfo<EmbeddingModel>> {
             model_file: String::from("onnx/model.onnx"),
             additional_files: vec!["onnx/model.onnx_data".to_string()],
             output_key: None,
+        },
+        ModelInfo {
+            model: EmbeddingModel::PixieRuneV1Int4,
+            dim: 1024,
+            description: String::from(
+                "INT4 (MatMulNBits) + INT8 (embeddings) quantized PIXIE-Rune-v1.0 — 1024d, 74 languages, 6k context",
+            ),
+            model_code: String::from("cstr/PIXIE-Rune-v1.0-ONNX"),
+            model_file: String::from("onnx/model_int4.onnx"),
+            additional_files: Vec::new(),
+            output_key: None,
+        },
+        ModelInfo {
+            model: EmbeddingModel::PixieRuneV1Int4Full,
+            dim: 1024,
+            description: String::from(
+                "Fully INT4 quantized PIXIE-Rune-v1.0 — INT4 MatMul + INT4 word embeddings, 337 MB",
+            ),
+            model_code: String::from("cstr/PIXIE-Rune-v1.0-ONNX"),
+            model_file: String::from("onnx/model_int4_full.onnx"),
+            additional_files: Vec::new(),
+            output_key: None,
+        },
+        // ── F2LLM-v2-0.6B ────────────────────────────────────────────────────────
+        ModelInfo {
+            model: EmbeddingModel::F2LlmV2_0_6BFp32,
+            dim: 1024,
+            description: String::from(
+                "F2LLM-v2-0.6B FP32 — 1024d, 32k context, last-token pooling (external data, 2.4 GB)",
+            ),
+            model_code: String::from("cstr/F2LLM-v2-0.6B-ONNX"),
+            model_file: String::from("model.onnx"),
+            additional_files: vec!["model.onnx.data".to_string()],
+            output_key: None,
+        },
+        // ── Jina Embeddings v3 ───────────────────────────────────────────────────
+        ModelInfo {
+            model: EmbeddingModel::JinaEmbeddingsV3,
+            dim: 1024,
+            description: String::from(
+                "Jina Embeddings v3 — 1024d, 8k context, XLM-R + LoRA task adapters. \
+                 task_id=1 (retrieval.passage) is injected automatically. \
+                 Use 'query: ' prefix for queries.",
+            ),
+            model_code: String::from("jinaai/jina-embeddings-v3"),
+            model_file: String::from("onnx/model.onnx"),
+            additional_files: vec!["onnx/model.onnx_data".to_string()],
+            output_key: None,
+        },
+        // ── Jina Embeddings v5 text-small ────────────────────────────────────────
+        ModelInfo {
+            model: EmbeddingModel::JinaEmbeddingsV5Small,
+            dim: 1024,
+            description: String::from(
+                "jina-embeddings-v5-text-small-retrieval — 677M, 1024d, 32k context, 119+ languages, last-token pooling (FP32, ~2.5 GB). Prepend \"Query: \" to queries, \"Document: \" to passages.",
+            ),
+            model_code: String::from("jinaai/jina-embeddings-v5-text-small-retrieval"),
+            model_file: String::from("onnx/model.onnx"),
+            additional_files: vec!["onnx/model.onnx_data".to_string()],
+            output_key: None,
+        },
+        // ── Microsoft Harrier OSS v1 270M ────────────────────────────────────────
+        ModelInfo {
+            model: EmbeddingModel::HarrierOSSV1_270M,
+            dim: 640,
+            description: String::from(
+                "Microsoft Harrier OSS v1 270M — 640d, multilingual text embedding model \
+                 with decoder-only architecture, last-token pooling (FP32, ~1 GB)",
+            ),
+            model_code: String::from("onnx-community/harrier-oss-v1-270m-ONNX"),
+            model_file: String::from("onnx/model.onnx"),
+            additional_files: vec!["onnx/model.onnx_data".to_string()],
+            output_key: Some(crate::OutputKey::ByName("sentence_embedding")),
         },
         // ── Jina Embeddings v5 Nano ───────────────────────────────────────────────
         ModelInfo {

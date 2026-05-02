@@ -12,6 +12,13 @@ pub struct TextRerank {
     pub tokenizer: Tokenizer,
     pub(crate) session: Session,
     pub(crate) need_token_type_ids: bool,
+    /// Maximum sequence length used for token-budget calculation when a
+    /// prompt template is in use.
+    pub(crate) max_length: usize,
+    /// Optional chat-template prompt for generative-style rerankers
+    /// (e.g. Zerank-1-small).  When `Some`, `{query}` and `{doc}`
+    /// placeholders are substituted before tokenisation.
+    pub(crate) prompt_template: Option<String>,
 }
 
 impl HasMaxLength for RerankerModel {
@@ -29,6 +36,9 @@ pub type RerankInitOptions = InitOptionsWithLength<RerankerModel>;
 pub struct RerankInitOptionsUserDefined {
     pub execution_providers: Vec<ExecutionProviderDispatch>,
     pub max_length: usize,
+    /// Optional chat-template prompt with `{query}` / `{doc}` placeholders,
+    /// used for generative-style rerankers such as Zerank-1-small.
+    pub prompt_template: Option<String>,
 }
 
 impl Default for RerankInitOptionsUserDefined {
@@ -36,6 +46,7 @@ impl Default for RerankInitOptionsUserDefined {
         Self {
             execution_providers: Default::default(),
             max_length: DEFAULT_MAX_LENGTH,
+            prompt_template: None,
         }
     }
 }
@@ -48,6 +59,7 @@ impl From<RerankInitOptions> for RerankInitOptionsUserDefined {
         RerankInitOptionsUserDefined {
             execution_providers: options.execution_providers,
             max_length: options.max_length,
+            prompt_template: None,
         }
     }
 }

@@ -22,4 +22,10 @@ pub struct RerankerModelInfo {
     pub model_code: String,
     pub model_file: String,
     pub additional_files: Vec<String>,
+    /// Optional chat-template prompt for generative-style rerankers
+    /// (e.g. Zerank-1-small). When `Some(template)`, the template's
+    /// `{query}` and `{doc}` placeholders are substituted before
+    /// tokenisation.  Standard cross-encoder rerankers leave this `None`
+    /// and tokenise `(query, doc)` as a sentence pair.
+    pub prompt_template: Option<String>,
 }

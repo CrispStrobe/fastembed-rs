@@ -41,6 +41,7 @@
 - [**mixedbread-ai/mxbai-embed-large-v1**](https://huggingface.co/mixedbread-ai/mxbai-embed-large-v1)
 - [**Alibaba-NLP/gte-base-en-v1.5**](https://huggingface.co/Alibaba-NLP/gte-base-en-v1.5)
 - [**Alibaba-NLP/gte-large-en-v1.5**](https://huggingface.co/Alibaba-NLP/gte-large-en-v1.5)
+- [**Alibaba-NLP/gte-modernbert-base**](https://huggingface.co/Alibaba-NLP/gte-modernbert-base) — 149M, 768d, 8192 tokens, CLS pooling, FP32 (596 MB) (`GteModernBertBase`)
 - [**lightonai/ModernBERT-embed-large**](https://huggingface.co/lightonai/modernbert-embed-large)
 - [**Qdrant/clip-ViT-B-32-text**](https://huggingface.co/Qdrant/clip-ViT-B-32-text) - pairs with `clip-ViT-B-32-vision` for image-to-text search
 - [**jinaai/jina-embeddings-v2-base-code**](https://huggingface.co/jinaai/jina-embeddings-v2-base-code)
@@ -56,6 +57,15 @@
 - [**snowflake/snowflake-arctic-embed-m**](https://huggingface.co/snowflake/snowflake-arctic-embed-m)
 - [**snowflake/snowflake-arctic-embed-m-long**](https://huggingface.co/snowflake/snowflake-arctic-embed-m-long)
 - [**snowflake/snowflake-arctic-embed-l**](https://huggingface.co/snowflake/snowflake-arctic-embed-l)
+- [**Snowflake/snowflake-arctic-embed-l-v2.0**](https://huggingface.co/Snowflake/snowflake-arctic-embed-l-v2.0) — 1024d, 8k context, CLS pooling
+- [**telepix/PIXIE-Rune-v1.0**](https://huggingface.co/telepix/PIXIE-Rune-v1.0) — 1024d, 74 languages, 6k context, CLS pooling. INT4 variants also ship via [cstr/PIXIE-Rune-v1.0-ONNX](https://huggingface.co/cstr/PIXIE-Rune-v1.0-ONNX) (`PixieRuneV1Int4`, `PixieRuneV1Int4Full`).
+- [**jinaai/jina-embeddings-v3**](https://huggingface.co/jinaai/jina-embeddings-v3) — 1024d, 8k context, XLM-R + LoRA task adapters; `task_id=1` (retrieval.passage) is injected automatically. Use `"query: "` prefix for queries (`JinaEmbeddingsV3`).
+- [**jinaai/jina-embeddings-v5-text-nano-retrieval**](https://huggingface.co/jinaai/jina-embeddings-v5-text-nano-retrieval) — 768d, multilingual, EuroBert encoder; uses `"Query: "` / `"Document: "` prefixes (`JinaEmbeddingsV5Nano`). Reads pre-pooled `sentence_embedding` ONNX output.
+- [**jinaai/jina-embeddings-v5-text-small-retrieval**](https://huggingface.co/jinaai/jina-embeddings-v5-text-small-retrieval) — 677M, 1024d, 32k context, 119+ languages, Qwen3-based, last-token pooling (`JinaEmbeddingsV5Small`). Prepend `"Query: "` to queries and `"Document: "` to passages. Supports `.rerank()` via `TextEmbedding::rerank()`.
+- [**electroglyph/Qwen3-Embedding-0.6B-onnx-uint8**](https://huggingface.co/electroglyph/Qwen3-Embedding-0.6B-onnx-uint8) — 1024d, uint8 ONNX, decoder-style last-token pooling
+- [**cstr/Octen-Embedding-0.6B-ONNX**](https://huggingface.co/cstr/Octen-Embedding-0.6B-ONNX) — 1024d, decoder, last-token pooling. Shipped as FP32 (`OctenEmbedding0_6BFp32`), INT8 (`OctenEmbedding0_6BInt8`), and INT4 MatMulNBits (`OctenEmbedding0_6BInt4`).
+- [**cstr/F2LLM-v2-0.6B-ONNX**](https://huggingface.co/cstr/F2LLM-v2-0.6B-ONNX) — 1024d, 200+ languages, Qwen3 decoder, last-token pooling, FP32 (`F2LlmV2_0_6BFp32`).
+- [**onnx-community/harrier-oss-v1-270m-ONNX**](https://huggingface.co/onnx-community/harrier-oss-v1-270m-ONNX) — 640d, 94 languages, Gemma3-text decoder, last-token pooling (`HarrierOSSV1_270M`).
 
 Quantized versions are also available for several models above (append `Q` to the model enum variant, e.g., `EmbeddingModel::BGESmallENV15Q`).
 
@@ -74,10 +84,18 @@ Quantized versions are also available for several models above (append `Q` to th
 
 ### Reranking
 
-- [**BAAI/bge-reranker-base**](https://huggingface.co/BAAI/bge-reranker-base) - Default
-- [**BAAI/bge-reranker-v2-m3**](https://huggingface.co/BAAI/bge-reranker-v2-m3)
-- [**jinaai/jina-reranker-v1-turbo-en**](https://huggingface.co/jinaai/jina-reranker-v1-turbo-en)
-- [**jinaai/jina-reranker-v2-base-multiligual**](https://huggingface.co/jinaai/jina-reranker-v2-base-multilingual)
+- [**BAAI/bge-reranker-base**](https://huggingface.co/BAAI/bge-reranker-base) - Default — English + Chinese
+- [**BAAI/bge-reranker-v2-m3**](https://huggingface.co/BAAI/bge-reranker-v2-m3) — multilingual (`BGERerankerV2M3`)
+- [**jinaai/jina-reranker-v1-turbo-en**](https://huggingface.co/jinaai/jina-reranker-v1-turbo-en) — English (`JINARerankerV1TurboEn`)
+- [**jinaai/jina-reranker-v2-base-multilingual**](https://huggingface.co/jinaai/jina-reranker-v2-base-multilingual) — 278M, multilingual, 1024 tokens, FP32 (`JINARerankerV2BaseMultiligual`) and INT8 (`JINARerankerV2BaseMultilingualInt8`).
+- [**Alibaba-NLP/gte-reranker-modernbert-base**](https://huggingface.co/Alibaba-NLP/gte-reranker-modernbert-base) — 149M, English, 8192 tokens, ModernBERT cross-encoder. FP32 (`GteRerankerModernBertBase`) and INT8 150 MB (`GteRerankerModernBertBaseQ`). The INT8 variant is shipped but is **English-only**: per-group ranking Spearman vs FP32 is 1.0 on English queries and ~0.8 on non-English queries (ModernBERT is English-trained).
+- [**mixedbread-ai/mxbai-rerank-xsmall-v1**](https://huggingface.co/mixedbread-ai/mxbai-rerank-xsmall-v1) — 33M, English, fast (`MxbaiRerankXsmallV1`, INT8: `MxbaiRerankXsmallV1Q`)
+- [**mixedbread-ai/mxbai-rerank-base-v1**](https://huggingface.co/mixedbread-ai/mxbai-rerank-base-v1) — 86M, English (`MxbaiRerankBaseV1`, INT8: `MxbaiRerankBaseV1Q`)
+- [**mixedbread-ai/mxbai-rerank-large-v1**](https://huggingface.co/mixedbread-ai/mxbai-rerank-large-v1) — 560M, English, DeBERTa-v3-large (`MxbaiRerankLargeV1`, INT8: `MxbaiRerankLargeV1Q`)
+- [**cross-encoder/ms-marco-MiniLM-L-6-v2**](https://huggingface.co/cross-encoder/ms-marco-MiniLM-L-6-v2) — 22M, English, very fast (`MsMarcoMiniLML6V2`)
+- [**cross-encoder/ms-marco-MiniLM-L-12-v2**](https://huggingface.co/cross-encoder/ms-marco-MiniLM-L-12-v2) — 33M, English (`MsMarcoMiniLML12V2`)
+- [**nvidia/llama-nemotron-rerank-1b-v2**](https://huggingface.co/nvidia/llama-nemotron-rerank-1b-v2) — 1B, multilingual, LLaMA-3.2 bidirectional, FP32 4.6 GB (`LlamaNemotronRerank1BV2`).
+- [**zeroentropy/zerank-1-small**](https://huggingface.co/zeroentropy/zerank-1-small) — 1.7B Qwen3 reranker, multilingual, chat-template generative reranker. Shipped via [cstr/zerank-1-small-ONNX](https://huggingface.co/cstr/zerank-1-small-ONNX) as FP32 ~3.4 GB (`ZerankSmall`). The original ONNX export had a hardcoded batch=1 in the attention-mask broadcast; this variant is patched and works at any batch size.
 
 ## ✊ Support
 

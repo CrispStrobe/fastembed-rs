@@ -37,7 +37,7 @@ fn verify_embeddings(model: &EmbeddingModel, embeddings: &[Embedding]) -> Result
         EmbeddingModel::AllMiniLML12V2Q => [-0.07808663, 0.27919534, -0.0770612, -0.75660324],
         EmbeddingModel::AllMiniLML6V2 => [0.59605527, 0.36542925, -0.16450031, -0.40903988],
         EmbeddingModel::AllMiniLML6V2Q => [0.5677276, 0.40180072, -0.15454668, -0.4672576],
-        EmbeddingModel::AllMpnetBaseV2=> [-0.21253541, -0.050802127, 0.14072442, -0.2908188],
+        EmbeddingModel::AllMpnetBaseV2 => [-0.21253541, -0.050802127, 0.14072442, -0.2908188],
         EmbeddingModel::BGEBaseENV15 => [-0.51290065, -0.4844747, -0.53036124, -0.5337459],
         EmbeddingModel::BGEBaseENV15Q => [-0.5130697, -0.48461288, -0.53067875, -0.5337806],
         EmbeddingModel::BGELargeENV15 => [-0.19347441, -0.28394595, -0.1549195, -0.22201893],
@@ -51,8 +51,10 @@ fn verify_embeddings(model: &EmbeddingModel, embeddings: &[Embedding]) -> Result
         EmbeddingModel::GTEBaseENV15Q => [-1.7032102, -1.7076654, -1.729326, -1.5317788],
         EmbeddingModel::GTELargeENV15 => [-1.6457459, -1.6582386, -1.6809471, -1.6070237],
         EmbeddingModel::GTELargeENV15Q => [-1.6044945, -1.6469251, -1.6828246, -1.6265479],
-        EmbeddingModel::ModernBertEmbedLarge => [ 0.24799639, 0.32174295, 0.17255782, 0.32919246],
-        EmbeddingModel::MultilingualE5Base => [-0.057211064, -0.14287914, -0.071678676, -0.17549144],
+        EmbeddingModel::ModernBertEmbedLarge => [0.24799639, 0.32174295, 0.17255782, 0.32919246],
+        EmbeddingModel::MultilingualE5Base => {
+            [-0.057211064, -0.14287914, -0.071678676, -0.17549144]
+        }
         EmbeddingModel::MultilingualE5Large => [-0.7473163, -0.76040405, -0.7537941, -0.72920954],
         EmbeddingModel::MultilingualE5Small => [-0.2640718, -0.13929011, -0.08091972, -0.12388548],
         EmbeddingModel::MxbaiEmbedLargeV1 => [-0.2032495, -0.29803938, -0.15803768, -0.23155808],
@@ -60,27 +62,58 @@ fn verify_embeddings(model: &EmbeddingModel, embeddings: &[Embedding]) -> Result
         EmbeddingModel::NomicEmbedTextV1 => [0.13788113, 0.10750078, 0.050809078, 0.09284662],
         EmbeddingModel::NomicEmbedTextV15 => [0.1932303, 0.13795732, 0.14700879, 0.14940643],
         EmbeddingModel::NomicEmbedTextV15Q => [0.20999804, 0.17161125, 0.15987156, 0.19436662],
-        EmbeddingModel::ParaphraseMLMiniLML12V2 => [-0.07795018, -0.059113946, -0.043668486, -0.1880083],
-        EmbeddingModel::ParaphraseMLMiniLML12V2Q => [-0.07749095, -0.058981877, -0.043487836, -0.18775631],
+        EmbeddingModel::ParaphraseMLMiniLML12V2 => {
+            [-0.07795018, -0.059113946, -0.043668486, -0.1880083]
+        }
+        EmbeddingModel::ParaphraseMLMiniLML12V2Q => {
+            [-0.07749095, -0.058981877, -0.043487836, -0.18775631]
+        }
         EmbeddingModel::ParaphraseMLMpnetBaseV2 => [0.39132136, 0.49490625, 0.65497226, 0.34237382],
         EmbeddingModel::ClipVitB32 => [0.7057363, 1.3549932, 0.46823958, 0.52351093],
-        EmbeddingModel::JinaEmbeddingsV2BaseCode => [-0.31383067, -0.3758629, -0.24878195, -0.35373706],
-        EmbeddingModel::JinaEmbeddingsV2BaseEN => [-0.055866606, -0.033922599, 0.012131551, -0.0132129812],
+        EmbeddingModel::JinaEmbeddingsV2BaseCode => {
+            [-0.31383067, -0.3758629, -0.24878195, -0.35373706]
+        }
+        EmbeddingModel::JinaEmbeddingsV2BaseEN => {
+            [-0.055866606, -0.033922599, 0.012131551, -0.0132129812]
+        }
         EmbeddingModel::EmbeddingGemma300M => [0.22703816, 0.6947083, 0.07579082, 1.6958784],
         EmbeddingModel::SnowflakeArcticEmbedXS => [0.4418098, 0.46424747, 0.37932625, 0.44663674],
         EmbeddingModel::SnowflakeArcticEmbedXSQ => [0.45034444, 0.46853474, 0.38483432, 0.44833523],
-        EmbeddingModel::SnowflakeArcticEmbedS => [-0.64302516, -0.63146704, -0.57860875, -0.5829098],
-        EmbeddingModel::SnowflakeArcticEmbedSQ => [-0.63687235, -0.6296427, -0.6070188, -0.57358015],
-        EmbeddingModel::SnowflakeArcticEmbedM => [-0.16999032, -0.109130904, -0.016444799, -0.108033374],
-        EmbeddingModel::SnowflakeArcticEmbedMQ => [-0.15008105, -0.11513549, 0.00008662231, -0.08609233],
-        EmbeddingModel::SnowflakeArcticEmbedMLong => [0.20396729, 0.18245143, 0.13489585, 0.15486401],
-        EmbeddingModel::SnowflakeArcticEmbedMLongQ => [0.20531628, 0.18564843, 0.14221531, 0.16035447],
+        EmbeddingModel::SnowflakeArcticEmbedS => {
+            [-0.64302516, -0.63146704, -0.57860875, -0.5829098]
+        }
+        EmbeddingModel::SnowflakeArcticEmbedSQ => {
+            [-0.63687235, -0.6296427, -0.6070188, -0.57358015]
+        }
+        EmbeddingModel::SnowflakeArcticEmbedM => {
+            [-0.16999032, -0.109130904, -0.016444799, -0.108033374]
+        }
+        EmbeddingModel::SnowflakeArcticEmbedMQ => {
+            [-0.15008105, -0.11513549, 0.00008662231, -0.08609233]
+        }
+        EmbeddingModel::SnowflakeArcticEmbedMLong => {
+            [0.20396729, 0.18245143, 0.13489585, 0.15486401]
+        }
+        EmbeddingModel::SnowflakeArcticEmbedMLongQ => {
+            [0.20531628, 0.18564843, 0.14221531, 0.16035447]
+        }
         EmbeddingModel::SnowflakeArcticEmbedL => [0.4049112, 0.42825335, 0.46401042, 0.4064963],
         EmbeddingModel::SnowflakeArcticEmbedLQ => [0.40164998, 0.4278314, 0.4612437, 0.40060186],
         EmbeddingModel::SnowflakeArcticEmbedLV2 => [0.26398557, 0.14880744, 0.13180876, 0.30424863],
-        EmbeddingModel::PixieRuneV1 => [0.21175426, 0.04924786, -0.04547663, 0.23019713],
+        EmbeddingModel::OctenEmbedding0_6BFp32 => [-1.1679014, 1.0701674, 0.56380516, 1.4149448],
+        EmbeddingModel::OctenEmbedding0_6BInt4 => [-0.75334597, 1.1573822, 0.30589685, 1.5168501],
+        EmbeddingModel::PixieRuneV1 => [0.2288776, 0.19070691, 0.14142901, 0.32406387],
+        EmbeddingModel::PixieRuneV1Int4 => [0.2858223, 0.22058362, 0.15294152, 0.31341535],
+        EmbeddingModel::PixieRuneV1Int4Full => [0.28613043, 0.21900642, 0.15266025, 0.31067854],
+        EmbeddingModel::JinaEmbeddingsV3 => [0.15385337, 0.06172323, -0.04699665, 0.38967043],
         EmbeddingModel::JinaEmbeddingsV5Nano => [-0.13502984, -0.39609835, 1.71589792, 0.97652829],
-        EmbeddingModel::Qwen3Embedding0_6BUint8 => [-3.61759973, -2.22492599, -2.60765219, -1.67113924],
+        EmbeddingModel::JinaEmbeddingsV5Small => [0.91580373, 0.46739948, -1.1745838, 1.3157014],
+        EmbeddingModel::GteModernBertBase => [0.3135964, 0.43796015, 0.33252144, 0.3145709],
+        EmbeddingModel::F2LlmV2_0_6BFp32 => [-0.60010016, -1.2393193, -0.6907619, 1.3460654],
+        EmbeddingModel::HarrierOSSV1_270M => [-1.2506653, -0.398214, -0.32943717, -1.5022918],
+        EmbeddingModel::Qwen3Embedding0_6BUint8 => {
+            [-3.61759973, -2.22492599, -2.60765219, -1.67113924]
+        }
     };
 
     let mismatched_indices = embeddings

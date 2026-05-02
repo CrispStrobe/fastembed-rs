@@ -112,8 +112,8 @@ impl TextEmbedding {
                 OnnxSource::Memory(bytes) => {
                     let mut session_builder = base_builder;
                     for ext in model.external_initializers {
-                        session_builder =
-                            session_builder.with_external_initializer_file_in_memory(
+                        session_builder = session_builder
+                            .with_external_initializer_file_in_memory(
                                 ext.file_name,
                                 ext.buffer.into(),
                             )?;
@@ -241,8 +241,7 @@ impl TextEmbedding {
 
         let model_code = TextEmbedding::get_model_info(&model)?.model_code.clone();
         let all_dirs = get_cache_dirs();
-        let effective_dir = find_model_cache_dir(&model_code, &all_dirs)
-            .unwrap_or(cache_dir);
+        let effective_dir = find_model_cache_dir(&model_code, &all_dirs).unwrap_or(cache_dir);
         pull_from_hf(model_code, effective_dir, show_download_progress)
     }
 
@@ -285,6 +284,7 @@ impl TextEmbedding {
             EmbeddingModel::GTEBaseENV15Q => Some(Pooling::Cls),
             EmbeddingModel::GTELargeENV15 => Some(Pooling::Cls),
             EmbeddingModel::GTELargeENV15Q => Some(Pooling::Cls),
+            EmbeddingModel::GteModernBertBase => Some(Pooling::Cls),
 
             EmbeddingModel::ClipVitB32 => Some(Pooling::Mean),
 
@@ -306,8 +306,13 @@ impl TextEmbedding {
 
             // Decoder-style models: take the last non-padding token
             EmbeddingModel::OctenEmbedding0_6BFp32 => Some(Pooling::LastToken),
-            EmbeddingModel::OctenEmbedding0_6BInt8 => Some(Pooling::LastToken),
             EmbeddingModel::OctenEmbedding0_6BInt4 => Some(Pooling::LastToken),
+            // F2LLM-v2-0.6B: same Qwen3 decoder architecture, last-token pooling
+            EmbeddingModel::F2LlmV2_0_6BFp32 => Some(Pooling::LastToken),
+            // Jina v5 text-small: Qwen3-0.6B decoder, last-token pooling
+            EmbeddingModel::JinaEmbeddingsV5Small => Some(Pooling::LastToken),
+            // Harrier decoder-only: pre-pooled `sentence_embedding` output, last-token as fallback
+            EmbeddingModel::HarrierOSSV1_270M => Some(Pooling::LastToken),
             // Calibrated uint8 model: affine dequant f32 = (u8 - 110) * 0.0027303685
             // Parameters from the electroglyph model card (range [-0.301, 0.395])
             EmbeddingModel::Qwen3Embedding0_6BUint8 => Some(Pooling::PrePooledU8 {
@@ -318,8 +323,15 @@ impl TextEmbedding {
             // CLS pooling
             EmbeddingModel::SnowflakeArcticEmbedLV2 => Some(Pooling::Cls),
 
-            // Mean pooling
-            EmbeddingModel::PixieRuneV1 => Some(Pooling::Mean),
+            // PIXIE-Rune uses CLS pooling (pooling_mode_cls_token: true in
+            // 1_Pooling/config.json on the model repo).
+            EmbeddingModel::PixieRuneV1 => Some(Pooling::Cls),
+            EmbeddingModel::PixieRuneV1Int4 => Some(Pooling::Cls),
+            EmbeddingModel::PixieRuneV1Int4Full => Some(Pooling::Cls),
+            // Jina v3: XLM-R + LoRA adapters. task_id=1 (retrieval.passage) is injected
+            // automatically (need_task_id auto-detected from ONNX inputs). Mean pooling
+            // over the 3D `text_embeds` output [batch, seq, 1024].
+            EmbeddingModel::JinaEmbeddingsV3 => Some(Pooling::Mean),
             // Jina v5 Nano ships a pre-pooled 'sentence_embedding' output [batch, dim].
             // Cls on a 2D tensor is a no-op pass-through, which is what we want here.
             EmbeddingModel::JinaEmbeddingsV5Nano => Some(Pooling::Cls),
@@ -505,15 +517,12 @@ impl TextEmbedding {
                 }
 
                 if self.need_task_id {
-                    // task_id=1 selects the retrieval adapter (e.g. Jina-embeddings-v3).
-                    let task_id_array = Array::from_shape_vec(
-                        (batch_size,),
-                        vec![1i64; batch_size],
-                    )?;
-                    session_inputs.push((
-                        "task_id".into(),
-                        Value::from_array(task_id_array)?.into(),
-                    ));
+                    // task_id=1 selects the retrieval.passage LoRA adapter
+                    // (e.g. Jina-embeddings-v3). The model expects a scalar
+                    // (0-D) int64 tensor, not [batch].
+                    let task_id_scalar = ndarray::arr0(1i64);
+                    session_inputs
+                        .push(("task_id".into(), Value::from_array(task_id_scalar)?.into()));
                 }
 
                 if self.kv_cache_layers > 0 {
@@ -521,7 +530,12 @@ impl TextEmbedding {
                     // This is required by onnx-community-style decoder models (e.g.
                     // onnx-community/Qwen3-Embedding-0.6B) that expect past_key_values inputs.
                     for layer in 0..self.kv_cache_layers {
-                        let kv_shape = (batch_size, self.kv_cache_kv_heads, 0usize, self.kv_cache_head_dim);
+                        let kv_shape = (
+                            batch_size,
+                            self.kv_cache_kv_heads,
+                            0usize,
+                            self.kv_cache_head_dim,
+                        );
                         let k_empty = ndarray::Array4::<f32>::zeros(kv_shape);
                         let v_empty = ndarray::Array4::<f32>::zeros(kv_shape);
                         session_inputs.push((
