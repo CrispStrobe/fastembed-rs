@@ -109,6 +109,15 @@ const FIXTURES: &[(EmbeddingModel, &str, Option<f32>)] = &[
     //     "tests/fixtures/F2LLM.safetensors",
     //     None,
     // ),  // gated out — see Octen Int8 note above.
+    // ── Jina v3 (XLM-R + LoRA task adapters; task_id=1 retrieval.passage)
+    // Reference path uses SentenceTransformer.encode(task='retrieval.passage')
+    // which applies the LoRA adapter; bare AutoModel.forward+pool would
+    // mis-validate.  fastembed-rs's ONNX bakes task_id=1 in, so they line up.
+    (
+        EmbeddingModel::JinaEmbeddingsV3,
+        "tests/fixtures/JinaEmbeddingsV3.safetensors",
+        Some(0.99),  // FP32 ONNX vs ST FP32 reference; should be near-identity
+    ),
     // ── Jina v5 text-small siblings
     // ORT 1.24 (rc.12) fails Initialize() on the V5Small Fp16 graph with
     // "Encountered unknown exception in Initialize()", same symptom as the
