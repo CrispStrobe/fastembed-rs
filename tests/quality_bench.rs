@@ -19,7 +19,9 @@
 
 #![cfg(feature = "hf-hub")]
 
-use fastembed::{InitOptionsUserDefined, Pooling, TextEmbedding, TokenizerFiles, UserDefinedEmbeddingModel};
+use fastembed::{
+    InitOptionsUserDefined, Pooling, TextEmbedding, TokenizerFiles, UserDefinedEmbeddingModel,
+};
 use std::{
     fs,
     path::{Path, PathBuf},
@@ -68,8 +70,7 @@ const QUERIES: &[&str] = &[
 
 // ── helpers ───────────────────────────────────────────────────────────────────
 
-const CRISP_MODELS: &str =
-    "Library/Application Support/com.christianstrobele.crispsorter/models";
+const CRISP_MODELS: &str = "Library/Application Support/com.christianstrobele.crispsorter/models";
 
 fn models_dir() -> PathBuf {
     PathBuf::from(std::env::var("HOME").unwrap()).join(CRISP_MODELS)
@@ -88,8 +89,7 @@ fn tok(dir: &Path) -> Option<TokenizerFiles> {
     Some(TokenizerFiles {
         tokenizer_file: read("tokenizer.json")?,
         config_file: read("config.json")?,
-        special_tokens_map_file: read("special_tokens_map.json")
-            .unwrap_or_else(|| b"{}".to_vec()),
+        special_tokens_map_file: read("special_tokens_map.json").unwrap_or_else(|| b"{}".to_vec()),
         tokenizer_config_file: read("tokenizer_config.json")?,
     })
 }
@@ -98,7 +98,11 @@ fn cosine(a: &[f32], b: &[f32]) -> f32 {
     let dot: f32 = a.iter().zip(b).map(|(x, y)| x * y).sum();
     let na: f32 = a.iter().map(|x| x * x).sum::<f32>().sqrt();
     let nb: f32 = b.iter().map(|x| x * x).sum::<f32>().sqrt();
-    if na < 1e-9 || nb < 1e-9 { 0.0 } else { dot / (na * nb) }
+    if na < 1e-9 || nb < 1e-9 {
+        0.0
+    } else {
+        dot / (na * nb)
+    }
 }
 
 /// For a single query, rank all docs by cosine similarity.
@@ -174,7 +178,11 @@ fn cohesion(doc_embs: &[Vec<f32>]) -> f32 {
             }
         }
     }
-    if count == 0 { 0.0 } else { total / count as f32 }
+    if count == 0 {
+        0.0
+    } else {
+        total / count as f32
+    }
 }
 
 /// Average inter-cluster cosine similarity (cross-topic pairs).
@@ -189,7 +197,11 @@ fn separation(doc_embs: &[Vec<f32>]) -> f32 {
             }
         }
     }
-    if count == 0 { 0.0 } else { total / count as f32 }
+    if count == 0 {
+        0.0
+    } else {
+        total / count as f32
+    }
 }
 
 // ── per-model evaluation ──────────────────────────────────────────────────────
@@ -206,20 +218,25 @@ struct Metrics {
 
 impl Metrics {
     fn ratio(&self) -> f32 {
-        if self.sep < 1e-6 { 0.0 } else { self.coh / self.sep }
+        if self.sep < 1e-6 {
+            0.0
+        } else {
+            self.coh / self.sep
+        }
     }
 }
 
 fn evaluate(label: &'static str, model: &mut TextEmbedding) -> Metrics {
     let t0 = Instant::now();
-    let doc_embs = model.embed(DOCS.to_vec(), Some(DOCS.len())).expect("doc embed failed");
-    let query_embs = model.embed(QUERIES.to_vec(), Some(QUERIES.len())).expect("query embed failed");
+    let doc_embs = model
+        .embed(DOCS.to_vec(), Some(DOCS.len()))
+        .expect("doc embed failed");
+    let query_embs = model
+        .embed(QUERIES.to_vec(), Some(QUERIES.len()))
+        .expect("query embed failed");
     let latency_ms = t0.elapsed().as_millis() as u64;
 
-    let rankings: Vec<Vec<(usize, f32)>> = query_embs
-        .iter()
-        .map(|q| rank(q, &doc_embs))
-        .collect();
+    let rankings: Vec<Vec<(usize, f32)>> = query_embs.iter().map(|q| rank(q, &doc_embs)).collect();
 
     Metrics {
         label,
@@ -242,7 +259,14 @@ fn print_table(rows: &[Metrics]) {
     for m in rows {
         println!(
             "{:<28} {:>5}  {:>6}  {:>5.3}  {:>5.3}  {:>5.3}  {:>5.3}  {:>5.2}",
-            m.label, m.dim, m.latency_ms, m.mrr, m.map5, m.coh, m.sep, m.ratio()
+            m.label,
+            m.dim,
+            m.latency_ms,
+            m.mrr,
+            m.map5,
+            m.coh,
+            m.sep,
+            m.ratio()
         );
     }
     println!();
@@ -316,9 +340,13 @@ fn bench_all_local_models() {
 
                     let t0 = Instant::now();
                     // embed() now prepends "Document: " automatically via doc_prefix.
-                    let doc_embs = m2.embed(DOCS.to_vec(), Some(DOCS.len())).expect("doc embed");
+                    let doc_embs = m2
+                        .embed(DOCS.to_vec(), Some(DOCS.len()))
+                        .expect("doc embed");
                     // embed_query() prepends "Query: " automatically.
-                    let query_embs = m2.embed_query(QUERIES.to_vec(), Some(QUERIES.len())).expect("query embed");
+                    let query_embs = m2
+                        .embed_query(QUERIES.to_vec(), Some(QUERIES.len()))
+                        .expect("query embed");
                     let latency_ms = t0.elapsed().as_millis() as u64;
 
                     let rankings: Vec<Vec<(usize, f32)>> =
@@ -383,7 +411,11 @@ fn bench_all_local_models() {
 
     print_table(&results);
 
-    println!("Corpus: {} documents  |  {} queries  |  4 relevant docs per query", DOCS.len(), QUERIES.len());
+    println!(
+        "Corpus: {} documents  |  {} queries  |  4 relevant docs per query",
+        DOCS.len(),
+        QUERIES.len()
+    );
 
     // Assert at least one model achieved meaningful retrieval (MRR > 0.3).
     let best_mrr = results.iter().map(|m| m.mrr).fold(0.0f32, f32::max);

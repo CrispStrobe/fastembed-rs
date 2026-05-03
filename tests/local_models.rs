@@ -10,8 +10,8 @@
 #![cfg(feature = "hf-hub")]
 
 use fastembed::{
-    EmbeddingModel, InitOptionsUserDefined, Pooling, TextEmbedding, TextInitOptions, TokenizerFiles,
-    UserDefinedEmbeddingModel,
+    EmbeddingModel, InitOptionsUserDefined, Pooling, TextEmbedding, TextInitOptions,
+    TokenizerFiles, UserDefinedEmbeddingModel,
 };
 use std::{
     fs,
@@ -33,10 +33,7 @@ fn hf_snap(cache: &Path, model_code: &str) -> Option<PathBuf> {
     let dir_name = format!("models--{}", model_code.replace('/', "--"));
     let refs_main = cache.join(&dir_name).join("refs/main");
     let hash = fs::read_to_string(refs_main).ok()?;
-    let snap = cache
-        .join(dir_name)
-        .join("snapshots")
-        .join(hash.trim());
+    let snap = cache.join(dir_name).join("snapshots").join(hash.trim());
     snap.exists().then_some(snap)
 }
 
@@ -47,8 +44,7 @@ fn tok(dir: &Path) -> Option<TokenizerFiles> {
     Some(TokenizerFiles {
         tokenizer_file: read("tokenizer.json")?,
         config_file: read("config.json")?,
-        special_tokens_map_file: read("special_tokens_map.json")
-            .unwrap_or_else(|| b"{}".to_vec()),
+        special_tokens_map_file: read("special_tokens_map.json").unwrap_or_else(|| b"{}".to_vec()),
         tokenizer_config_file: read("tokenizer_config.json")?,
     })
 }
@@ -57,7 +53,11 @@ fn cosine(a: &[f32], b: &[f32]) -> f32 {
     let dot: f32 = a.iter().zip(b).map(|(x, y)| x * y).sum();
     let na: f32 = a.iter().map(|x| x * x).sum::<f32>().sqrt();
     let nb: f32 = b.iter().map(|x| x * x).sum::<f32>().sqrt();
-    if na == 0.0 || nb == 0.0 { 0.0 } else { dot / (na * nb) }
+    if na == 0.0 || nb == 0.0 {
+        0.0
+    } else {
+        dot / (na * nb)
+    }
 }
 
 /// Embed three sentences and check: correct count, unit norm, semantic ordering.
@@ -191,13 +191,18 @@ fn test_jina_v5_nano() {
     ];
 
     let t0 = Instant::now();
-    let embs = model.embed(sentences.clone(), Some(3)).expect("embed failed");
+    let embs = model
+        .embed(sentences.clone(), Some(3))
+        .expect("embed failed");
     let elapsed = t0.elapsed();
 
     assert_eq!(embs.len(), 3);
     for e in &embs {
         let norm: f32 = e.iter().map(|x| x * x).sum::<f32>().sqrt();
-        assert!((norm - 1.0).abs() < 1e-3, "not unit-normalised (norm={norm:.6})");
+        assert!(
+            (norm - 1.0).abs() < 1e-3,
+            "not unit-normalised (norm={norm:.6})"
+        );
     }
 
     let sim_pos = cosine(&embs[0], &embs[1]);
@@ -250,13 +255,18 @@ fn test_qwen3_uint8() {
     ];
 
     let t0 = Instant::now();
-    let embs = model.embed(texts.clone(), Some(texts.len())).expect("embed failed");
+    let embs = model
+        .embed(texts.clone(), Some(texts.len()))
+        .expect("embed failed");
     let elapsed = t0.elapsed();
 
     assert_eq!(embs.len(), texts.len(), "wrong embedding count");
     for e in &embs {
         let norm: f32 = e.iter().map(|x| x * x).sum::<f32>().sqrt();
-        assert!((norm - 1.0).abs() < 1e-3, "[Qwen3Uint8] embedding not unit-normalised (norm={norm:.6})");
+        assert!(
+            (norm - 1.0).abs() < 1e-3,
+            "[Qwen3Uint8] embedding not unit-normalised (norm={norm:.6})"
+        );
     }
 
     let sim_pos = cosine(&embs[0], &embs[1]);
@@ -321,10 +331,7 @@ fn test_octen_int4_local() {
     // batch_size=1 to stay within the static shape constraint
     let t0 = Instant::now();
     let embs = model
-        .embed(
-            vec!["Semantic search with neural embeddings"],
-            Some(1),
-        )
+        .embed(vec!["Semantic search with neural embeddings"], Some(1))
         .expect("Octen INT4 embed failed");
 
     let norm: f32 = embs[0].iter().map(|x| x * x).sum::<f32>().sqrt();

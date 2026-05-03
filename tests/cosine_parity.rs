@@ -114,7 +114,7 @@ const FIXTURES: &[(EmbeddingModel, &str, Option<f32>)] = &[
     (
         EmbeddingModel::JinaEmbeddingsV3,
         "tests/fixtures/JinaEmbeddingsV3.safetensors",
-        Some(0.99),  // FP32 ONNX vs ST FP32 reference; should be near-identity
+        Some(0.99), // FP32 ONNX vs ST FP32 reference; should be near-identity
     ),
     // ── Jina v5 text-small siblings
     // V5SmallFp16 had a single Constant_2836 tensor referencing upstream
