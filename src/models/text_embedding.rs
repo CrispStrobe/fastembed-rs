@@ -146,10 +146,31 @@ pub enum EmbeddingModel {
     /// jinaai/jina-embeddings-v5-text-small-retrieval — 677M, 1024d, 32k context, multilingual.
     /// Prepend "Query: " to queries and "Document: " to documents for retrieval.
     JinaEmbeddingsV5Small,
+    /// jina-embeddings-v5-text-small-retrieval FP16 — last-token pooling, ~1.2 GB.
+    /// Streaming FP32→FP16 export (W8A16-style: weights FP16, activations FP32 via Cast nodes).
+    /// Validated via cosine-parity harness at threshold 0.99.
+    JinaEmbeddingsV5SmallFp16,
+    /// jina-embeddings-v5-text-small-retrieval INT8 — last-token pooling, ~1.06 GB.
+    /// SmoothQuant (alpha=0.8) + per-channel dynamic INT8.  cos≈0.994 vs PyTorch reference.
+    /// Validated via cosine-parity harness at threshold 0.90.
+    JinaEmbeddingsV5SmallInt8,
+
+    // ── Octen-Embedding-0.6B (Qwen3-0.6B fine-tune, decoder, last-token pooling) ──
+    /// cstr/Octen-Embedding-0.6B-ONNX-FP16 — last-token pooling, ~1.2 GB.
+    /// Streaming FP32→FP16 export (W8A16-style); cos=1.000 vs PyTorch reference.
+    /// Validated via cosine-parity harness at threshold 0.99.
+    OctenEmbedding0_6BFp16,
+    /// cstr/Octen-Embedding-0.6B-ONNX-INT4-FULL — INT4 MatMul + INT8 Gather (~434 MB).
+    /// Validated via cosine-parity harness at threshold 0.90.
+    OctenEmbedding0_6BInt4Full,
 
     // ── F2LLM-v2-0.6B (Qwen3-1024d fine-tune, decoder, last-token pooling) ──────
     /// cstr/F2LLM-v2-0.6B-ONNX — FP32 reference (2.4 GB, external data)
     F2LlmV2_0_6BFp32,
+    /// cstr/F2LLM-v2-0.6B-ONNX-FP16 — last-token pooling, ~1.2 GB.
+    /// Streaming FP32→FP16 export (W8A16-style); cos=1.000 vs PyTorch reference.
+    /// Validated via cosine-parity harness at threshold 0.99.
+    F2LlmV2_0_6BFp16,
 
     // ── Microsoft Harrier OSS v1 270M (decoder-only, last-token pooling) ─────
     /// onnx-community/harrier-oss-v1-270m-ONNX — 640d, multilingual, decoder-only architecture
@@ -625,6 +646,31 @@ fn init_models_map() -> HashMap<EmbeddingModel, ModelInfo<EmbeddingModel>> {
             additional_files: vec!["model.int4.onnx.data".to_string()],
             output_key: None,
         },
+        ModelInfo {
+            model: EmbeddingModel::OctenEmbedding0_6BFp16,
+            dim: 1024,
+            description: String::from(
+                "Octen-Embedding-0.6B FP16 — 1024d, 32k context, last-token pooling. Streaming \
+                 FP32→FP16 export (W8A16-style: weights FP16, activations FP32 via Cast nodes); \
+                 cos=1.000 vs PyTorch reference, ~1.2 GB (50% memory of FP32).",
+            ),
+            model_code: String::from("cstr/Octen-Embedding-0.6B-ONNX-FP16"),
+            model_file: String::from("model.fp16.onnx"),
+            additional_files: vec!["model.fp16.onnx.data".to_string()],
+            output_key: None,
+        },
+        ModelInfo {
+            model: EmbeddingModel::OctenEmbedding0_6BInt4Full,
+            dim: 1024,
+            description: String::from(
+                "Octen-Embedding-0.6B INT4-Full — 1024d, 32k context, last-token pooling \
+                 (INT4 MatMul + INT8 Gather, external data, ~434 MB)",
+            ),
+            model_code: String::from("cstr/Octen-Embedding-0.6B-ONNX-INT4-FULL"),
+            model_file: String::from("model.int4_full.onnx"),
+            additional_files: vec!["model.int4_full.onnx.data".to_string()],
+            output_key: None,
+        },
         // ── Qwen3-Embedding calibrated uint8 ─────────────────────────────────────
         ModelInfo {
             model: EmbeddingModel::Qwen3Embedding0_6BUint8,
@@ -719,6 +765,19 @@ fn init_models_map() -> HashMap<EmbeddingModel, ModelInfo<EmbeddingModel>> {
             additional_files: vec!["model.onnx.data".to_string()],
             output_key: None,
         },
+        ModelInfo {
+            model: EmbeddingModel::F2LlmV2_0_6BFp16,
+            dim: 1024,
+            description: String::from(
+                "F2LLM-v2-0.6B FP16 — 1024d, 32k context, last-token pooling. Streaming \
+                 FP32→FP16 export (W8A16-style); cos=1.000 vs PyTorch reference, ~1.2 GB \
+                 (50% memory of FP32).",
+            ),
+            model_code: String::from("cstr/F2LLM-v2-0.6B-ONNX-FP16"),
+            model_file: String::from("model.fp16.onnx"),
+            additional_files: vec!["model.fp16.onnx.data".to_string()],
+            output_key: None,
+        },
         // ── Jina Embeddings v3 ───────────────────────────────────────────────────
         ModelInfo {
             model: EmbeddingModel::JinaEmbeddingsV3,
@@ -743,6 +802,32 @@ fn init_models_map() -> HashMap<EmbeddingModel, ModelInfo<EmbeddingModel>> {
             model_code: String::from("jinaai/jina-embeddings-v5-text-small-retrieval"),
             model_file: String::from("onnx/model.onnx"),
             additional_files: vec!["onnx/model.onnx_data".to_string()],
+            output_key: None,
+        },
+        ModelInfo {
+            model: EmbeddingModel::JinaEmbeddingsV5SmallFp16,
+            dim: 1024,
+            description: String::from(
+                "jina-embeddings-v5-text-small-retrieval FP16 — 1024d, last-token pooling. \
+                 Streaming FP32→FP16 export (W8A16-style); cos=1.000 vs PyTorch reference, \
+                 ~1.2 GB (50% memory of FP32). Prepend \"Query: \" / \"Document: \" prefixes.",
+            ),
+            model_code: String::from("cstr/jina-embeddings-v5-text-small-retrieval-onnx-fp16"),
+            model_file: String::from("model.fp16.onnx"),
+            additional_files: vec!["model.fp16.onnx.data".to_string()],
+            output_key: None,
+        },
+        ModelInfo {
+            model: EmbeddingModel::JinaEmbeddingsV5SmallInt8,
+            dim: 1024,
+            description: String::from(
+                "jina-embeddings-v5-text-small-retrieval INT8 — 1024d, last-token pooling. \
+                 SmoothQuant (alpha=0.8) + per-channel dynamic INT8; cos≈0.994 vs PyTorch \
+                 reference, ~1.06 GB.",
+            ),
+            model_code: String::from("cstr/jina-embeddings-v5-text-small-retrieval-onnx-int8"),
+            model_file: String::from("model.int8.onnx"),
+            additional_files: vec!["model.int8.onnx.data".to_string()],
             output_key: None,
         },
         // ── Microsoft Harrier OSS v1 270M ────────────────────────────────────────

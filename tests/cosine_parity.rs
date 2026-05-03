@@ -45,27 +45,76 @@ use std::path::Path;
 ///
 /// Multiple quantized siblings of one model can share a single fixture
 /// (the reference is the upstream PyTorch model; each sibling is run
-/// independently against that reference).
-const FIXTURES: &[(EmbeddingModel, &str)] = &[
+/// independently against that reference).  The optional third tuple
+/// element overrides the threshold stored in the fixture metadata —
+/// useful when one fixture is reused for both an FP16 sibling (where
+/// we expect cos≈1.000 and want a tighter bar) and an INT8/INT4
+/// sibling (where ~0.90 is the operational pass).
+const FIXTURES: &[(EmbeddingModel, &str, Option<f32>)] = &[
     (
         EmbeddingModel::AllMiniLML6V2,
         "tests/fixtures/AllMiniLML6V2.safetensors",
+        None,
     ),
     (
         EmbeddingModel::GteModernBertBaseQ,
         "tests/fixtures/GteModernBertBaseQ.safetensors",
+        None,
     ),
     (
         EmbeddingModel::GteModernBertBaseQ4F16,
         "tests/fixtures/GteModernBertBaseQ.safetensors",
+        None,
     ),
     (
         EmbeddingModel::PixieRuneV1Q,
         "tests/fixtures/PixieRuneV1Q.safetensors",
+        None,
     ),
     (
         EmbeddingModel::SnowflakeArcticEmbedMV2,
         "tests/fixtures/SnowflakeArcticEmbedMV2.safetensors",
+        None,
+    ),
+    // ── Octen-Embedding-0.6B siblings (one PyTorch reference, three quant variants)
+    (
+        EmbeddingModel::OctenEmbedding0_6BFp16,
+        "tests/fixtures/Octen.safetensors",
+        Some(0.99), // FP16 should be near-lossless
+    ),
+    // OctenEmbedding0_6BInt8 (SmoothQuant) deferred: harness measures
+    // cos_min=0.639 on the German "Klimawandel" sentence on this probe set
+    // (other 5 sentences pass at 0.86–0.92, mean=0.846). LEARNINGS's
+    // "cos≈0.987" was the mean, not the min. Drop until either (a) a
+    // larger probe set is adopted with documented borderline policy, or
+    // (b) the SmoothQuant recipe is re-tuned for the German-outlier case.
+    (
+        EmbeddingModel::OctenEmbedding0_6BInt4Full,
+        "tests/fixtures/Octen.safetensors",
+        None,
+    ),
+    // ── F2LLM-v2-0.6B siblings
+    (
+        EmbeddingModel::F2LlmV2_0_6BFp16,
+        "tests/fixtures/F2LLM.safetensors",
+        Some(0.99),
+    ),
+    // F2LlmV2_0_6BInt8 dropped: harness measures cos_min=0.263 / cos_mean=0.426,
+    // matching LEARNINGS's *vanilla* INT8 numbers (0.304 / 0.423), NOT the
+    // SmoothQuant numbers (cos_min=0.93). The HF repo cstr/F2LLM-v2-0.6B-ONNX-INT8
+    // currently hosts the broken vanilla export; either the SmoothQuant re-upload
+    // never happened or was reverted. Re-add only after the repo is re-uploaded
+    // with the SmoothQuant artifact and the harness re-runs above 0.90.
+    // ── Jina v5 text-small siblings
+    (
+        EmbeddingModel::JinaEmbeddingsV5SmallFp16,
+        "tests/fixtures/JinaEmbeddingsV5Small.safetensors",
+        Some(0.99),
+    ),
+    (
+        EmbeddingModel::JinaEmbeddingsV5SmallInt8,
+        "tests/fixtures/JinaEmbeddingsV5Small.safetensors",
+        None,
     ),
 ];
 
@@ -119,7 +168,7 @@ fn cosine_parity_against_pytorch_reference() {
     let mut failures: Vec<String> = Vec::new();
     let mut ran = 0;
 
-    for (model, fixture_path) in FIXTURES {
+    for (model, fixture_path, threshold_override) in FIXTURES {
         eprintln!("\n== {model:?} (fixture: {fixture_path}) ==");
 
         // Skip silently if fixture wasn't generated for this checkout.
@@ -159,10 +208,12 @@ fn cosine_parity_against_pytorch_reference() {
             }
         };
 
-        let threshold: f32 = meta_kv
-            .get("threshold")
-            .and_then(|s| s.parse().ok())
-            .unwrap_or(0.95);
+        let threshold: f32 = threshold_override.unwrap_or_else(|| {
+            meta_kv
+                .get("threshold")
+                .and_then(|s| s.parse().ok())
+                .unwrap_or(0.95)
+        });
 
         // Sanity-check that the fixture matches the variant being tested.
         let info = TextEmbedding::get_model_info(&model).expect("model info");
