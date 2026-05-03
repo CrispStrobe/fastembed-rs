@@ -17,6 +17,8 @@
 //! Run with:
 //!   cargo test --test quality_bench -- --nocapture
 
+#![cfg(feature = "hf-hub")]
+
 use fastembed::{InitOptionsUserDefined, Pooling, TextEmbedding, TokenizerFiles, UserDefinedEmbeddingModel};
 use std::{
     fs,

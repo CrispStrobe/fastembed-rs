@@ -7,6 +7,8 @@
 //! Run with:
 //!   LOCAL_MODELS_DIR=/path/to/models cargo test --test local_models -- --nocapture
 
+#![cfg(feature = "hf-hub")]
+
 use fastembed::{
     EmbeddingModel, InitOptionsUserDefined, Pooling, TextEmbedding, TextInitOptions, TokenizerFiles,
     UserDefinedEmbeddingModel,
