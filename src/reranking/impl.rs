@@ -8,7 +8,8 @@ use ort::{
 use std::thread::available_parallelism;
 
 #[cfg(feature = "hf-hub")]
-use crate::common::{load_tokenizer_hf_hub, ort_err};
+use crate::common::load_tokenizer_hf_hub;
+use crate::common::ort_err;
 use crate::{
     common::{load_tokenizer, OnnxSource},
     models::reranking::reranker_model_list,

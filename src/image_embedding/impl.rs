@@ -18,13 +18,13 @@ use anyhow::anyhow;
 #[cfg(feature = "hf-hub")]
 use anyhow::Context;
 
+#[cfg(feature = "hf-hub")]
 use super::ImageInitOptions;
 use super::{
     init::{ImageInitOptionsUserDefined, UserDefinedImageEmbeddingModel},
     utils::{Compose, Transform, TransformData},
     ImageEmbedding, DEFAULT_BATCH_SIZE,
 };
-#[cfg(feature = "hf-hub")]
 use crate::common::ort_err;
 
 impl ImageEmbedding {
