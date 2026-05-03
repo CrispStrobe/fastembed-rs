@@ -189,6 +189,11 @@ pub enum EmbeddingModel {
     // ── Microsoft Harrier OSS v1 270M (decoder-only, last-token pooling) ─────
     /// onnx-community/harrier-oss-v1-270m-ONNX — 640d, multilingual, decoder-only architecture
     HarrierOSSV1_270M,
+    /// onnx-community/harrier-oss-v1-270m-ONNX INT8 — quantized variant.
+    /// Uses `GatherBlockQuantized.bits` attribute → requires ORT >= 1.23
+    /// (`ort = 2.0.0-rc.12+`).  Validated via cosine-parity at threshold 0.99
+    /// (LEARNINGS Phase 7 reports cos_min=0.99993 vs PyTorch reference).
+    HarrierOSSV1_270MQ,
 }
 
 /// Centralized function to initialize the models map.
@@ -881,6 +886,20 @@ fn init_models_map() -> HashMap<EmbeddingModel, ModelInfo<EmbeddingModel>> {
             model_code: String::from("onnx-community/harrier-oss-v1-270m-ONNX"),
             model_file: String::from("onnx/model.onnx"),
             additional_files: vec!["onnx/model.onnx_data".to_string()],
+            output_key: Some(crate::OutputKey::ByName("sentence_embedding")),
+        },
+        ModelInfo {
+            model: EmbeddingModel::HarrierOSSV1_270MQ,
+            dim: 640,
+            description: String::from(
+                "Microsoft Harrier OSS v1 270M — INT8 quantized, 640d, multilingual text \
+                 embedding model with decoder-only architecture, last-token pooling. \
+                 Uses GatherBlockQuantized.bits attribute → requires ORT >= 1.23 \
+                 (`ort = 2.0.0-rc.12+`).",
+            ),
+            model_code: String::from("onnx-community/harrier-oss-v1-270m-ONNX"),
+            model_file: String::from("onnx/model_quantized.onnx"),
+            additional_files: Vec::new(),
             output_key: Some(crate::OutputKey::ByName("sentence_embedding")),
         },
         // ── Jina Embeddings v5 Nano ───────────────────────────────────────────────

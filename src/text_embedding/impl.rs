@@ -331,6 +331,7 @@ impl TextEmbedding {
             EmbeddingModel::JinaEmbeddingsV5SmallInt8 => Some(Pooling::LastToken),
             // Harrier decoder-only: pre-pooled `sentence_embedding` output, last-token as fallback
             EmbeddingModel::HarrierOSSV1_270M => Some(Pooling::LastToken),
+            EmbeddingModel::HarrierOSSV1_270MQ => Some(Pooling::LastToken),
             // Calibrated uint8 model: affine dequant f32 = (u8 - 110) * 0.0027303685
             // Parameters from the electroglyph model card (range [-0.301, 0.395])
             EmbeddingModel::Qwen3Embedding0_6BUint8 => Some(Pooling::PrePooledU8 {

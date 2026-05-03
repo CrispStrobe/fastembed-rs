@@ -118,6 +118,15 @@ const FIXTURES: &[(EmbeddingModel, &str, Option<f32>)] = &[
         "tests/fixtures/JinaEmbeddingsV5Small.safetensors",
         None,
     ),
+    // ── Harrier OSS v1 270M (decoder, last-token, pre-pooled output)
+    // HarrierOSSV1_270M FP32 still ships under exact-checksum on main; only
+    // the Q variant goes through the harness because its GatherBlockQuantized
+    // op requires ORT >= 1.23.
+    (
+        EmbeddingModel::HarrierOSSV1_270MQ,
+        "tests/fixtures/HarrierOSSV1_270M.safetensors",
+        None, // fixture default 0.99
+    ),
 ];
 
 /// Parse an f32 tensor stored as little-endian bytes into a flat `Vec<f32>`.

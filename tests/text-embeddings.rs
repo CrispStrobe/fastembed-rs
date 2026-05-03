@@ -130,7 +130,8 @@ fn verify_embeddings(model: &EmbeddingModel, embeddings: &[Embedding]) -> Result
         | EmbeddingModel::F2LlmV2_0_6BFp16
         | EmbeddingModel::F2LlmV2_0_6BInt8
         | EmbeddingModel::JinaEmbeddingsV5SmallFp16
-        | EmbeddingModel::JinaEmbeddingsV5SmallInt8 => {
+        | EmbeddingModel::JinaEmbeddingsV5SmallInt8
+        | EmbeddingModel::HarrierOSSV1_270MQ => {
             // Validated via cosine-parity in tests/cosine_parity.rs.
             return Ok(());
         }
