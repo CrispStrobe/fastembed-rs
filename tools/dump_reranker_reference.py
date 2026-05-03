@@ -94,6 +94,17 @@ def import_deps():
     return torch, AutoModelForSequenceClassification, AutoTokenizer, snapshot_download, save_file
 
 
+def import_ort_deps():
+    """Lighter import path for the --reference-onnx fallback. Skips
+    transformers/torch (some upstream HF repos need TF for AutoModel
+    auto-resolution; the FP32 ONNX bypasses that)."""
+    import onnxruntime as ort
+    from transformers import AutoTokenizer
+    from huggingface_hub import snapshot_download
+    from safetensors.numpy import save_file
+    return ort, AutoTokenizer, snapshot_download, save_file
+
+
 def build_pairs(
     groups: list[tuple[str, list[str]]],
 ) -> tuple[list[tuple[str, str]], list[int], list[int]]:
@@ -108,6 +119,77 @@ def build_pairs(
             group_id.append(g_idx)
         expected_top1.append(first)
     return pairs, group_id, expected_top1
+
+
+def onnx_scores_cross_encoder(
+    onnx_path: Path,
+    tokenizer_snapshot: Path,
+    pairs: list[tuple[str, str]],
+    max_length: int,
+    trust_remote_code: bool,
+    prompt_template: Optional[str] = None,
+) -> tuple[np.ndarray, str]:
+    """Score each pair via an FP32 ONNX session (fallback when the upstream
+    HF repo's modeling code can't be loaded by AutoModel — e.g. Zerank's
+    TF dependency).  When a `prompt_template` with `{query}`/`{doc}`
+    placeholders is given, the formatted text is tokenized as a single
+    sequence (generative-style reranker like Zerank); otherwise the pairs
+    are tokenized as standard cross-encoder (query, doc) pairs."""
+    ort, AutoTokenizer, _, _ = import_ort_deps()
+    tok = AutoTokenizer.from_pretrained(
+        str(tokenizer_snapshot), trust_remote_code=trust_remote_code
+    )
+
+    if prompt_template is not None:
+        formatted = [
+            prompt_template.replace("{query}", q).replace("{doc}", d) for q, d in pairs
+        ]
+        enc = tok(
+            formatted,
+            padding=True, truncation=True, max_length=max_length, return_tensors="np",
+        )
+    else:
+        enc = tok(
+            [p[0] for p in pairs], [p[1] for p in pairs],
+            padding=True, truncation=True, max_length=max_length, return_tensors="np",
+        )
+
+    so = ort.SessionOptions()
+    so.log_severity_level = 3
+    sess = ort.InferenceSession(
+        str(onnx_path), sess_options=so, providers=["CPUExecutionProvider"]
+    )
+    in_names = {i.name for i in sess.get_inputs()}
+    feed = {k: np.asarray(v).astype(np.int64) for k, v in enc.items() if k in in_names}
+
+    # Some ONNX exports (e.g. Zerank) have a hardcoded batch=1 attention-
+    # mask broadcast.  Fall back to per-row inference in that case.
+    try:
+        out = sess.run(None, feed)
+    except Exception as e:
+        msg = str(e)
+        if "Shape mismatch" in msg or "broadcast" in msg or "{1,1," in msg:
+            print(f"  batched call failed ({msg[:80]}…), falling back to batch=1", flush=True)
+            n = next(iter(feed.values())).shape[0]
+            outs = []
+            for i in range(n):
+                f1 = {k: v[i:i+1] for k, v in feed.items()}
+                outs.append(sess.run(None, f1)[0])
+            out = [np.concatenate(outs, axis=0)]
+        else:
+            raise
+
+    arr = out[0].astype(np.float32)
+    if arr.ndim == 2 and arr.shape[1] == 1:
+        scores = arr[:, 0]
+        convention = "logit_1class"
+    elif arr.ndim == 2 and arr.shape[1] == 2:
+        scores = arr[:, 0] - arr[:, 1]
+        convention = "logit_for_minus_against"
+    else:
+        scores = arr.reshape(arr.shape[0], -1)[:, 0]
+        convention = "logit_first_col"
+    return scores, convention
 
 
 def hf_scores_cross_encoder(
@@ -166,6 +248,23 @@ def parse_args() -> argparse.Namespace:
                         "rerankers may pass at 0.93–0.97.")
     p.add_argument("--notes", default="",
                    help="Free-text caveat stored in fixture metadata.")
+
+    # Fallback for upstream HF repos whose modeling code can't be loaded
+    # by AutoModelForSequenceClassification (e.g. Zerank's TF dependency).
+    p.add_argument("--reference-onnx", default=None, type=Path,
+                   help="Path to an FP32 ONNX file to use as the reference instead of "
+                        "loading via AutoModelForSequenceClassification.  Use when the "
+                        "upstream HF repo has a TF dependency or other AutoModel blocker. "
+                        "The fixture's `model_repo` will still be set to --repo (so the "
+                        "test-side cosine-parity comparison stays anchored to the upstream "
+                        "model's identity), but `score_convention` will note the ONNX "
+                        "fallback.")
+    p.add_argument("--prompt-template", default=None,
+                   help="For generative-style rerankers (e.g. Zerank's Qwen3 chat template). "
+                        "Format: a string with `{query}` and `{doc}` placeholders.  When set, "
+                        "the formatted single-sequence text is tokenized rather than the "
+                        "(query, doc) pair.")
+
     p.add_argument("--output", required=True, type=Path,
                    help="Path to write the safetensors fixture.")
 
@@ -197,9 +296,20 @@ def main() -> int:
     pairs, group_id, expected_top1 = build_pairs(TEST_GROUPS)
     print(f"Pairs: {len(pairs)} across {max(group_id)+1} groups")
 
-    scores, convention = hf_scores_cross_encoder(
-        snap, pairs, args.max_length, args.trust_remote_code
-    )
+    if args.reference_onnx is not None:
+        if not args.reference_onnx.exists():
+            print(f"ERROR: --reference-onnx not found: {args.reference_onnx}", file=sys.stderr)
+            return 2
+        print(f"Reference: FP32 ONNX (NOT PyTorch) — {args.reference_onnx}", flush=True)
+        scores, convention = onnx_scores_cross_encoder(
+            args.reference_onnx, snap, pairs, args.max_length,
+            args.trust_remote_code, args.prompt_template,
+        )
+        convention = f"onnx_fp32:{convention}"
+    else:
+        scores, convention = hf_scores_cross_encoder(
+            snap, pairs, args.max_length, args.trust_remote_code
+        )
     print(f"Reference scores: shape={scores.shape}, range=[{scores.min():.3f}, {scores.max():.3f}]")
     print(f"Score convention: {convention}")
 
