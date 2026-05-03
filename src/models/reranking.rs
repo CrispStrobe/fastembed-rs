@@ -15,6 +15,12 @@ pub enum RerankerModel {
     JINARerankerV2BaseMultiligual,
     /// jinaai/jina-reranker-v2-base-multilingual — INT8 quantized
     JINARerankerV2BaseMultilingualInt8,
+    /// jinaai/jina-reranker-v2-base-multilingual — FP16 (`onnx/model_fp16.onnx`).
+    /// Uses graph optimisations (`SimplifiedLayerNormFusion` with
+    /// `InsertedPrecisionFreeCast`) that require ORT >= 1.23
+    /// (`ort = 2.0.0-rc.12+`).  Validated via reranker-parity at
+    /// `spearman_threshold=0.9`.
+    JINARerankerV2BaseMultilingualFp16,
     // ── mixedbread-ai mxbai-rerank ────────────────────────────────────────────
     /// mixedbread-ai/mxbai-rerank-xsmall-v1 — 33M, English, 512 tokens
     MxbaiRerankXsmallV1,
@@ -36,6 +42,11 @@ pub enum RerankerModel {
     // ── nvidia/llama-nemotron-rerank-1b-v2 ────────────────────────────────────
     /// nvidia/llama-nemotron-rerank-1b-v2 — 1B, multilingual, LLaMA-3.2 bidirectional (FP32)
     LlamaNemotronRerank1BV2,
+    /// nvidia/llama-nemotron-rerank-1b-v2 — INT4 MatMul + INT8 Gather (~832 MB).
+    /// Block-wise INT4 weights preserve dynamic range better than per-channel
+    /// vanilla INT8 (Spearman 0.944 per LEARNINGS Phase 7).  Requires ORT
+    /// >= 1.23 (`ort = 2.0.0-rc.12+`).
+    LlamaNemotronRerank1BV2Int4Full,
     // ── Alibaba-NLP/gte-reranker-modernbert-base ──────────────────────────────
     /// Alibaba-NLP/gte-reranker-modernbert-base — 149M, English, 8192 tokens (FP32, 596 MB)
     GteRerankerModernBertBase,
@@ -44,9 +55,22 @@ pub enum RerankerModel {
     /// drops to ~0.8 on non-English queries.  ModernBERT is English-trained,
     /// so this is consistent with the underlying model's design.
     GteRerankerModernBertBaseQ,
+    /// Alibaba-NLP/gte-reranker-modernbert-base — Q4F16 mixed-precision (140 MB).
+    /// Uses graph optimisations that require ORT >= 1.23
+    /// (`ort = 2.0.0-rc.12+`).  Validated via reranker-parity.
+    GteRerankerModernBertBaseQ4F16,
     // ── zeroentropy/zerank-1-small (Qwen3 1.7B reranker, multilingual) ────────
     /// zeroentropy/zerank-1-small — 1.7B Qwen3 reranker, multilingual (FP32 ONNX, ~3.4 GB; batch-broadcast patched)
     ZerankSmall,
+    /// zeroentropy/zerank-1-small — INT8 quantized (~1.7 GB; batch-broadcast patched).
+    /// Per LEARNINGS Phase 7: Spearman 0.965 vs PyTorch on the multilingual
+    /// probe set (English-clean, slight ranking drift on some non-English queries).
+    /// Requires ORT >= 1.23 (`ort = 2.0.0-rc.12+`).
+    ZerankSmallInt8,
+    /// zeroentropy/zerank-1-small — INT4 MatMulNBits (~860 MB; batch-broadcast patched).
+    /// Per LEARNINGS Phase 7: Spearman 0.935 vs PyTorch on the multilingual
+    /// probe set.  Requires ORT >= 1.23 (`ort = 2.0.0-rc.12+`).
+    ZerankSmallInt4,
 }
 
 pub fn reranker_model_list() -> Vec<RerankerModelInfo> {
@@ -92,6 +116,17 @@ pub fn reranker_model_list() -> Vec<RerankerModelInfo> {
             ),
             model_code: String::from("jinaai/jina-reranker-v2-base-multilingual"),
             model_file: String::from("onnx/model_int8.onnx"),
+            additional_files: vec![],
+            prompt_template: None,
+        },
+        RerankerModelInfo {
+            model: RerankerModel::JINARerankerV2BaseMultilingualFp16,
+            description: String::from(
+                "Jina reranker v2, multilingual — 278M, 1024 tokens, XLM-RoBERTa (FP16). \
+                 Requires ORT >= 1.23 (`ort = 2.0.0-rc.12+`).",
+            ),
+            model_code: String::from("jinaai/jina-reranker-v2-base-multilingual"),
+            model_file: String::from("onnx/model_fp16.onnx"),
             additional_files: vec![],
             prompt_template: None,
         },
@@ -186,6 +221,18 @@ pub fn reranker_model_list() -> Vec<RerankerModelInfo> {
             additional_files: vec![String::from("model.onnx_data")],
             prompt_template: None,
         },
+        RerankerModelInfo {
+            model: RerankerModel::LlamaNemotronRerank1BV2Int4Full,
+            description: String::from(
+                "nvidia/llama-nemotron-rerank-1b-v2 — INT4 MatMul + INT8 Gather (~832 MB). \
+                 Block-wise INT4 weights preserve dynamic range; Spearman 0.944 vs PyTorch \
+                 (LEARNINGS Phase 7).  Requires ORT >= 1.23 (`ort = 2.0.0-rc.12+`).",
+            ),
+            model_code: String::from("cstr/llama-nemotron-rerank-1b-v2-ONNX"),
+            model_file: String::from("model_int4_full.onnx"),
+            additional_files: vec![],
+            prompt_template: None,
+        },
         // ── Alibaba-NLP/gte-reranker-modernbert-base ─────────────────────────
         RerankerModelInfo {
             model: RerankerModel::GteRerankerModernBertBase,
@@ -207,6 +254,17 @@ pub fn reranker_model_list() -> Vec<RerankerModelInfo> {
             additional_files: vec![],
             prompt_template: None,
         },
+        RerankerModelInfo {
+            model: RerankerModel::GteRerankerModernBertBaseQ4F16,
+            description: String::from(
+                "gte-reranker-modernbert-base — 149M, English, 8192 tokens, ModernBERT cross-encoder (Q4F16, ~140 MB). \
+                 Requires ORT >= 1.23 (`ort = 2.0.0-rc.12+`).",
+            ),
+            model_code: String::from("Alibaba-NLP/gte-reranker-modernbert-base"),
+            model_file: String::from("onnx/model_q4f16.onnx"),
+            additional_files: vec![],
+            prompt_template: None,
+        },
         // ── zeroentropy/zerank-1-small ────────────────────────────────────────
         // The originally-published export had a hardcoded batch=1 in the
         // attention-mask broadcast (the And kernel can't broadcast {1,1,T,T}
@@ -222,6 +280,34 @@ pub fn reranker_model_list() -> Vec<RerankerModelInfo> {
             model_code: String::from("cstr/zerank-1-small-ONNX"),
             model_file: String::from("model.onnx"),
             additional_files: vec![String::from("model.onnx_data")],
+            prompt_template: Some(String::from(
+                "<|im_start|>user\nQuery: {query}\nDocument: {doc}\nRelevant:<|im_end|>\n<|im_start|>assistant\n",
+            )),
+        },
+        RerankerModelInfo {
+            model: RerankerModel::ZerankSmallInt8,
+            description: String::from(
+                "zeroentropy/zerank-1-small — INT8 (~1.7 GB; batch-broadcast patched). \
+                 Spearman 0.965 vs PyTorch (LEARNINGS Phase 7).  Requires ORT >= 1.23 \
+                 (`ort = 2.0.0-rc.12+`).",
+            ),
+            model_code: String::from("cstr/zerank-1-small-ONNX"),
+            model_file: String::from("model_int8.onnx"),
+            additional_files: vec![String::from("model_int8.onnx_data")],
+            prompt_template: Some(String::from(
+                "<|im_start|>user\nQuery: {query}\nDocument: {doc}\nRelevant:<|im_end|>\n<|im_start|>assistant\n",
+            )),
+        },
+        RerankerModelInfo {
+            model: RerankerModel::ZerankSmallInt4,
+            description: String::from(
+                "zeroentropy/zerank-1-small — INT4 MatMulNBits (~860 MB; batch-broadcast patched). \
+                 Spearman 0.935 vs PyTorch (LEARNINGS Phase 7).  Requires ORT >= 1.23 \
+                 (`ort = 2.0.0-rc.12+`).",
+            ),
+            model_code: String::from("cstr/zerank-1-small-ONNX"),
+            model_file: String::from("model_int4_full.onnx"),
+            additional_files: vec![],
             prompt_template: Some(String::from(
                 "<|im_start|>user\nQuery: {query}\nDocument: {doc}\nRelevant:<|im_end|>\n<|im_start|>assistant\n",
             )),

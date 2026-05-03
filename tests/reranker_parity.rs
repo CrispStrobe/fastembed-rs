@@ -45,19 +45,105 @@ use std::path::Path;
 /// fixture (the reference is the upstream PyTorch model; each sibling is
 /// run independently against that reference).  The optional third tuple
 /// element overrides the threshold stored in the fixture metadata.
-const FIXTURES: &[(RerankerModel, &str, Option<f32>)] = &[(
-    RerankerModel::MxbaiRerankXsmallV1,
-    "tests/fixtures/reranker__MxbaiRerankXsmallV1.safetensors",
-    None,
-)];
+const FIXTURES: &[(RerankerModel, &str, Option<f32>)] = &[
+    // ── mxbai-rerank ────────────────────────────────────────────────────────
+    (
+        RerankerModel::MxbaiRerankXsmallV1,
+        "tests/fixtures/reranker__MxbaiRerankXsmallV1.safetensors",
+        None,
+    ),
+    (
+        RerankerModel::MxbaiRerankXsmallV1Q,
+        "tests/fixtures/reranker__MxbaiRerankXsmallV1.safetensors",
+        None,
+    ),
+    (
+        RerankerModel::MxbaiRerankBaseV1,
+        "tests/fixtures/reranker__MxbaiRerankBaseV1.safetensors",
+        None,
+    ),
+    (
+        RerankerModel::MxbaiRerankBaseV1Q,
+        "tests/fixtures/reranker__MxbaiRerankBaseV1.safetensors",
+        None,
+    ),
+    (
+        RerankerModel::MxbaiRerankLargeV1,
+        "tests/fixtures/reranker__MxbaiRerankLargeV1.safetensors",
+        None,
+    ),
+    (
+        RerankerModel::MxbaiRerankLargeV1Q,
+        "tests/fixtures/reranker__MxbaiRerankLargeV1.safetensors",
+        None,
+    ),
+    // ── Alibaba-NLP/gte-reranker-modernbert-base (FP32 / Q / Q4F16) ─────────
+    (
+        RerankerModel::GteRerankerModernBertBase,
+        "tests/fixtures/reranker__GteRerankerModernBertBase.safetensors",
+        None,
+    ),
+    (
+        RerankerModel::GteRerankerModernBertBaseQ,
+        "tests/fixtures/reranker__GteRerankerModernBertBase.safetensors",
+        None,
+    ),
+    (
+        RerankerModel::GteRerankerModernBertBaseQ4F16,
+        "tests/fixtures/reranker__GteRerankerModernBertBase.safetensors",
+        None,
+    ),
+    // ── jinaai/jina-reranker-v2-base-multilingual (FP32 / Int8 / Fp16) ──────
+    (
+        RerankerModel::JINARerankerV2BaseMultiligual,
+        "tests/fixtures/reranker__JINARerankerV2BaseMultiligual.safetensors",
+        None,
+    ),
+    (
+        RerankerModel::JINARerankerV2BaseMultilingualInt8,
+        "tests/fixtures/reranker__JINARerankerV2BaseMultiligual.safetensors",
+        None,
+    ),
+    (
+        RerankerModel::JINARerankerV2BaseMultilingualFp16,
+        "tests/fixtures/reranker__JINARerankerV2BaseMultiligual.safetensors",
+        None,
+    ),
+    // ── nvidia/llama-nemotron-rerank-1b-v2 (FP32 only — Int8 catastrophic outlier collapse, dropped per LEARNINGS Phase 7)
+    (
+        RerankerModel::LlamaNemotronRerank1BV2,
+        "tests/fixtures/reranker__LlamaNemotronRerank1BV2.safetensors",
+        None,
+    ),
+    (
+        RerankerModel::LlamaNemotronRerank1BV2Int4Full,
+        "tests/fixtures/reranker__LlamaNemotronRerank1BV2.safetensors",
+        None,
+    ),
+    // ── zeroentropy/zerank-1-small (Qwen3 1.7B; FP32 + INT8 + INT4) ──
+    // NOT in FIXTURES: the upstream HF repo's modeling code has a TensorFlow
+    // dependency (`TFPreTrainedModel` import in `integration_utils`), so
+    // `AutoModel.from_pretrained` cannot load it without TF installed.
+    // LEARNINGS Phase 7 notes: "FP32 ONNX (HF code has TF dep)".  The
+    // existing `test_rerank` panda assertion in `tests/text-embeddings.rs`
+    // covers behavioural validation; cosine-parity needs `--reference-onnx`
+    // support in `dump_reranker_reference.py` to run against the FP32 ONNX
+    // instead of PyTorch — left as future work.
+];
 
 #[derive(serde::Deserialize)]
 struct Group {
     query: String,
     docs: Vec<String>,
-    expected_top1_pair_idx: usize,
+    /// The pair-index of the doc we'd hope a perfect reranker picks.
+    /// Informational only — if the upstream PyTorch reference disagrees,
+    /// the test still validates ONNX-vs-reference via `ref_top1_pair_idx`.
     #[serde(default)]
     #[allow(dead_code)]
+    expected_top1_pair_idx: usize,
+    /// What the upstream PyTorch reference *actually* picked.  This is
+    /// what the harness asserts the ONNX must match — the test gates
+    /// ONNX-vs-PyTorch-reference, not ONNX-vs-our-intuition.
     ref_top1_pair_idx: usize,
 }
 
@@ -288,12 +374,18 @@ fn reranker_parity_against_pytorch_reference() {
         }
 
         let sr = spearman(&ref_scores, &got_scores);
-        let expected: Vec<usize> = groups.iter().map(|g| g.expected_top1_pair_idx).collect();
-        let top1_match = group_top1_pair_idx == expected;
+        // Compare ONNX top-1 to the *PyTorch reference's* top-1 (what the
+        // upstream model actually picked), not to our hardcoded
+        // expected_top1.  The harness gates ONNX-vs-reference; whether the
+        // reference itself "agrees" with our intuition is a separate
+        // concern (e.g. multilingual rerankers may pick English over
+        // German on the Mitose group — see Group::expected vs ref).
+        let ref_top1: Vec<usize> = groups.iter().map(|g| g.ref_top1_pair_idx).collect();
+        let top1_match = group_top1_pair_idx == ref_top1;
 
         eprintln!(
             "  spearman={sr:.4}  threshold>={threshold:.4}  \
-             top1_per_group got={group_top1_pair_idx:?} expected={expected:?} match={top1_match}"
+             top1_per_group got={group_top1_pair_idx:?} ref={ref_top1:?} match={top1_match}"
         );
 
         if sr < threshold {
@@ -305,7 +397,7 @@ fn reranker_parity_against_pytorch_reference() {
         if !top1_match {
             failures.push(format!(
                 "{model:?}: top1 per group mismatch: got {group_top1_pair_idx:?}, \
-                 expected {expected:?}"
+                 ref {ref_top1:?}"
             ));
             continue;
         }
