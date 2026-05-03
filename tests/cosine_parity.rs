@@ -82,17 +82,15 @@ const FIXTURES: &[(EmbeddingModel, &str, Option<f32>)] = &[
         "tests/fixtures/Octen.safetensors",
         Some(0.99), // FP16 should be near-lossless
     ),
-    // SmoothQuant α=0.8 was re-uploaded to HF on 2026-05-03 (Python ORT 1.25
-    // verified cos_min=0.987).  ORT 1.24 — which ships in `ort = 2.0.0-rc.12`,
-    // the newest crate version at the time of writing — fails Initialize() on
-    // these graphs with "Encountered unknown exception in Initialize()".
-    // Re-enable when an ort crate exposing ORT 1.25+ lands.  Tracking comment
-    // mirrored in `tools/fixtures.toml`.
-    // (
-    //     EmbeddingModel::OctenEmbedding0_6BInt8,
-    //     "tests/fixtures/Octen.safetensors",
-    //     None,
-    // ),
+    // SmoothQuant α=0.8 with corrected external_data.location (the rename script
+    // `rename_and_upload_smoothquant.py` had renamed model.smoothed.int8.onnx →
+    // model.int8.onnx but left the ONNX header pointing at the old .data filename;
+    // header rewritten on HF 2026-05-03 PM).
+    (
+        EmbeddingModel::OctenEmbedding0_6BInt8,
+        "tests/fixtures/Octen.safetensors",
+        None,
+    ),
     (
         EmbeddingModel::OctenEmbedding0_6BInt4Full,
         "tests/fixtures/Octen.safetensors",
@@ -104,11 +102,11 @@ const FIXTURES: &[(EmbeddingModel, &str, Option<f32>)] = &[
         "tests/fixtures/F2LLM.safetensors",
         Some(0.99),
     ),
-    // (
-    //     EmbeddingModel::F2LlmV2_0_6BInt8,
-    //     "tests/fixtures/F2LLM.safetensors",
-    //     None,
-    // ),  // gated out — see Octen Int8 note above.
+    (
+        EmbeddingModel::F2LlmV2_0_6BInt8,
+        "tests/fixtures/F2LLM.safetensors",
+        None,
+    ),
     // ── Jina v3 (XLM-R + LoRA task adapters; task_id=1 retrieval.passage)
     // Reference path uses SentenceTransformer.encode(task='retrieval.passage')
     // which applies the LoRA adapter; bare AutoModel.forward+pool would
@@ -119,22 +117,21 @@ const FIXTURES: &[(EmbeddingModel, &str, Option<f32>)] = &[
         Some(0.99),  // FP32 ONNX vs ST FP32 reference; should be near-identity
     ),
     // ── Jina v5 text-small siblings
-    // ORT 1.24 (rc.12) fails Initialize() on the V5Small Fp16 graph with
-    // "Encountered unknown exception in Initialize()", same symptom as the
-    // SmoothQuant Int8 graphs above.  This isn't quantization-specific:
-    // V5Small is a custom-code Jina-bert-v2 architecture and the streaming
-    // FP16 export evidently emits a graph pattern ORT 1.24 can't handle but
-    // ORT 1.25 can.  Re-enable when an ort crate exposing ORT 1.25+ lands.
-    // (
-    //     EmbeddingModel::JinaEmbeddingsV5SmallFp16,
-    //     "tests/fixtures/JinaEmbeddingsV5Small.safetensors",
-    //     Some(0.99),
-    // ),
-    // (
-    //     EmbeddingModel::JinaEmbeddingsV5SmallInt8,
-    //     "tests/fixtures/JinaEmbeddingsV5Small.safetensors",
-    //     None,
-    // ),
+    // V5SmallFp16 had a single Constant_2836 tensor referencing upstream
+    // `model.onnx_data` (which was never uploaded to the cstr/ repo); inlined
+    // the 256-byte tensor into the ONNX header on HF 2026-05-03 PM.  V5SmallInt8
+    // was always loadable on ORT 1.24 (the earlier failure was an LFS download
+    // hiccup, not a graph-init problem).
+    (
+        EmbeddingModel::JinaEmbeddingsV5SmallFp16,
+        "tests/fixtures/JinaEmbeddingsV5Small.safetensors",
+        Some(0.99),
+    ),
+    (
+        EmbeddingModel::JinaEmbeddingsV5SmallInt8,
+        "tests/fixtures/JinaEmbeddingsV5Small.safetensors",
+        None,
+    ),
     // ── V5 Nano on extended (20-text) probe set
     // Investigation result (LEARNINGS Phase 9 #7 / probe/ort-rc12 pass3 2026-05-03):
     // canonical 6-text probe gave cos_min=0.557 on row 1; the 20-text extended
@@ -149,19 +146,18 @@ const FIXTURES: &[(EmbeddingModel, &str, Option<f32>)] = &[
     //     Some(0.85),
     // ),
     // ── Harrier OSS v1 270M (decoder, last-token, pre-pooled output)
-    // HarrierOSSV1_270M FP32 still ships under exact-checksum on main; the Q
-    // variant uses GatherBlockQuantized.bits and was expected to need ORT
-    // >= 1.23 (rc.12 ships ORT 1.24).  Empirically (probe/ort-rc12 pass3),
-    // ORT 1.24 still fails Initialize() on this graph with "Encountered
-    // unknown exception in Initialize()" — same symptom as the SmoothQuant
-    // Int8 graphs and V5Small Fp16.  Gated OUT pending an ort crate exposing
-    // ORT 1.25+.  (The `load_tokenizer_hf_hub` fix that made this loadable
-    // for tokenizer purposes is kept — it unblocks any future ORT bump.)
-    // (
-    //     EmbeddingModel::HarrierOSSV1_270MQ,
-    //     "tests/fixtures/HarrierOSSV1_270M.safetensors",
-    //     None, // fixture default 0.99
-    // ),
+    // HarrierOSSV1_270M FP32 still ships under exact-checksum on main; only the
+    // Q variant goes through cosine-parity.  Uses GatherBlockQuantized.bits
+    // which requires ORT >= 1.23 (this branch ships ort=2.0.0-rc.12 / ORT 1.24).
+    // Earlier "Initialize unknown exception" was traced to a missing
+    // `additional_files` entry — the upstream onnx-community/.../ONNX repo
+    // stores weights in `onnx/model_quantized.onnx_data` which fastembed-rs
+    // wasn't requesting; fixed in src/models/text_embedding.rs.
+    (
+        EmbeddingModel::HarrierOSSV1_270MQ,
+        "tests/fixtures/HarrierOSSV1_270M.safetensors",
+        None, // fixture default 0.99
+    ),
 ];
 
 /// Parse an f32 tensor stored as little-endian bytes into a flat `Vec<f32>`.

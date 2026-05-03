@@ -899,7 +899,7 @@ fn init_models_map() -> HashMap<EmbeddingModel, ModelInfo<EmbeddingModel>> {
             ),
             model_code: String::from("onnx-community/harrier-oss-v1-270m-ONNX"),
             model_file: String::from("onnx/model_quantized.onnx"),
-            additional_files: Vec::new(),
+            additional_files: vec!["onnx/model_quantized.onnx_data".to_string()],
             output_key: Some(crate::OutputKey::ByName("sentence_embedding")),
         },
         // ── Jina Embeddings v5 Nano ───────────────────────────────────────────────
