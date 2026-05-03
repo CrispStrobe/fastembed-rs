@@ -228,8 +228,8 @@ notes = """
 Int8 was DROPPED entirely (Spearman 0.49, ranking collapse — Qwen3-style \
 outlier on LLaMA-3.2).  Int4Full preserves dynamic range better — empirically \
 on rc.12 (reranker_parity pass1, 2026-05-03) Spearman=0.944, full top1 match.  \
-Required ORT >= 1.23 for Int4Full's GatherBlockQuantized; rc.12 ships ORT 1.24 \
-which works fine (unlike SmoothQuant Int8 / V5Small / HarrierQ which need ORT 1.25)."""
+Requires ORT >= 1.23 for Int4Full's GatherBlockQuantized; rc.12 ships ORT 1.24 \
+which works fine."""
 
 [reranker.ZerankSmall]
 file = "tests/fixtures/reranker__ZerankSmall.safetensors"
