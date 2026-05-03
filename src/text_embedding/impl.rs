@@ -1,7 +1,7 @@
 //! The definition of the main struct for text embeddings - [`TextEmbedding`].
 
 #[cfg(feature = "hf-hub")]
-use crate::common::load_tokenizer_hf_hub;
+use crate::common::{load_tokenizer_hf_hub, ort_err};
 use crate::{
     common::{load_tokenizer, OnnxSource},
     models::{text_embedding::models_list, ModelTrait},
@@ -71,9 +71,12 @@ impl TextEmbedding {
         let post_processing = TextEmbedding::get_default_pooling_method(&model_name);
 
         let session = Session::builder()?
-            .with_execution_providers(execution_providers)?
-            .with_optimization_level(GraphOptimizationLevel::Level3)?
-            .with_intra_threads(threads)?
+            .with_execution_providers(execution_providers)
+            .map_err(ort_err)?
+            .with_optimization_level(GraphOptimizationLevel::Level3)
+            .map_err(ort_err)?
+            .with_intra_threads(threads)
+            .map_err(ort_err)?
             .commit_from_file(model_file_reference)?;
 
         let tokenizer = load_tokenizer_hf_hub(model_repo, max_length)?;
@@ -103,10 +106,13 @@ impl TextEmbedding {
         let threads = available_parallelism()?.get();
 
         let session = {
-            let base_builder = Session::builder()?
-                .with_execution_providers(execution_providers)?
-                .with_optimization_level(GraphOptimizationLevel::Level3)?
-                .with_intra_threads(threads)?;
+            let mut base_builder = Session::builder()?
+                .with_execution_providers(execution_providers)
+                .map_err(ort_err)?
+                .with_optimization_level(GraphOptimizationLevel::Level3)
+                .map_err(ort_err)?
+                .with_intra_threads(threads)
+                .map_err(ort_err)?;
 
             match model.onnx_source {
                 OnnxSource::Memory(bytes) => {
@@ -116,14 +122,17 @@ impl TextEmbedding {
                             .with_external_initializer_file_in_memory(
                                 ext.file_name,
                                 ext.buffer.into(),
-                            )?;
+                            )
+                            .map_err(ort_err)?;
                     }
-                    session_builder.commit_from_memory(&bytes)?
+                    session_builder
+                        .commit_from_memory(&bytes)
+                        .map_err(ort_err)?
                 }
                 OnnxSource::File(path) => {
                     // ORT resolves the companion .onnx.data file automatically
                     // from the same directory — no manual initializer setup needed.
-                    base_builder.commit_from_file(path)?
+                    base_builder.commit_from_file(path).map_err(ort_err)?
                 }
             }
         };

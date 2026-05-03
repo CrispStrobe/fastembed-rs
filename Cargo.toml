@@ -27,8 +27,8 @@ half = { version = "2" }
 hf-hub = { version = "0.4.1", default-features = false, optional = true }
 image = { version = "0.25.2", optional = true }
 ndarray = { version = "0.17", default-features = false }
-ort = { version = "=2.0.0-rc.11", default-features = false, features = [
-  "ndarray", "std", "half"
+ort = { version = "=2.0.0-rc.12", default-features = false, features = [
+  "ndarray", "std", "half", "api-24"
 ] }
 safetensors = { version = "0.7" }
 serde_json = { version = "1" }

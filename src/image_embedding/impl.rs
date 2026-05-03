@@ -18,13 +18,14 @@ use anyhow::anyhow;
 #[cfg(feature = "hf-hub")]
 use anyhow::Context;
 
-#[cfg(feature = "hf-hub")]
 use super::ImageInitOptions;
 use super::{
     init::{ImageInitOptionsUserDefined, UserDefinedImageEmbeddingModel},
     utils::{Compose, Transform, TransformData},
     ImageEmbedding, DEFAULT_BATCH_SIZE,
 };
+#[cfg(feature = "hf-hub")]
+use crate::common::ort_err;
 
 impl ImageEmbedding {
     /// Try to generate a new ImageEmbedding Instance
@@ -60,9 +61,12 @@ impl ImageEmbedding {
             .context(format!("Failed to retrieve {}", model_file_name))?;
 
         let session = Session::builder()?
-            .with_execution_providers(execution_providers)?
-            .with_optimization_level(GraphOptimizationLevel::Level3)?
-            .with_intra_threads(threads)?
+            .with_execution_providers(execution_providers)
+            .map_err(ort_err)?
+            .with_optimization_level(GraphOptimizationLevel::Level3)
+            .map_err(ort_err)?
+            .with_intra_threads(threads)
+            .map_err(ort_err)?
             .commit_from_file(model_file_reference)?;
 
         Ok(Self::new(preprocessor, session))
@@ -84,9 +88,12 @@ impl ImageEmbedding {
         let preprocessor = Compose::from_bytes(model.preprocessor_file)?;
 
         let session = Session::builder()?
-            .with_execution_providers(execution_providers)?
-            .with_optimization_level(GraphOptimizationLevel::Level3)?
-            .with_intra_threads(threads)?
+            .with_execution_providers(execution_providers)
+            .map_err(ort_err)?
+            .with_optimization_level(GraphOptimizationLevel::Level3)
+            .map_err(ort_err)?
+            .with_intra_threads(threads)
+            .map_err(ort_err)?
             .commit_from_memory(&model.onnx_file)?;
 
         Ok(Self::new(preprocessor, session))

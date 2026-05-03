@@ -8,7 +8,7 @@ use ort::{
 use std::thread::available_parallelism;
 
 #[cfg(feature = "hf-hub")]
-use crate::common::load_tokenizer_hf_hub;
+use crate::common::{load_tokenizer_hf_hub, ort_err};
 use crate::{
     common::{load_tokenizer, OnnxSource},
     models::reranking::reranker_model_list,
@@ -97,9 +97,12 @@ impl TextRerank {
         }
 
         let session = Session::builder()?
-            .with_execution_providers(execution_providers)?
-            .with_optimization_level(GraphOptimizationLevel::Level3)?
-            .with_intra_threads(threads)?
+            .with_execution_providers(execution_providers)
+            .map_err(ort_err)?
+            .with_optimization_level(GraphOptimizationLevel::Level3)
+            .map_err(ort_err)?
+            .with_intra_threads(threads)
+            .map_err(ort_err)?
             .commit_from_file(model_file_reference)?;
 
         let prompt_template = TextRerank::get_model_info(&model_name).prompt_template;
@@ -122,14 +125,17 @@ impl TextRerank {
 
         let threads = available_parallelism()?.get();
 
-        let session = Session::builder()?
-            .with_execution_providers(execution_providers)?
-            .with_optimization_level(GraphOptimizationLevel::Level3)?
-            .with_intra_threads(threads)?;
+        let mut session = Session::builder()?
+            .with_execution_providers(execution_providers)
+            .map_err(ort_err)?
+            .with_optimization_level(GraphOptimizationLevel::Level3)
+            .map_err(ort_err)?
+            .with_intra_threads(threads)
+            .map_err(ort_err)?;
 
         let session = match &model.onnx_source {
-            OnnxSource::Memory(bytes) => session.commit_from_memory(bytes)?,
-            OnnxSource::File(path) => session.commit_from_file(path)?,
+            OnnxSource::Memory(bytes) => session.commit_from_memory(bytes).map_err(ort_err)?,
+            OnnxSource::File(path) => session.commit_from_file(path).map_err(ort_err)?,
         };
 
         let tokenizer = load_tokenizer(model.tokenizer_files, max_length)?;

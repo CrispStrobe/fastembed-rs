@@ -61,7 +61,10 @@ pub fn get_cache_dirs() -> Vec<std::path::PathBuf> {
 /// snapshot for `model_code` (`models--{org}--{name}/refs/main` exists and
 /// the corresponding `snapshots/{hash}` directory is present).
 #[cfg(feature = "hf-hub")]
-pub fn find_model_cache_dir(model_code: &str, dirs: &[std::path::PathBuf]) -> Option<std::path::PathBuf> {
+pub fn find_model_cache_dir(
+    model_code: &str,
+    dirs: &[std::path::PathBuf],
+) -> Option<std::path::PathBuf> {
     let dir_name = format!("models--{}", model_code.replace('/', "--"));
     for dir in dirs {
         let refs_main = dir.join(&dir_name).join("refs/main");
@@ -85,6 +88,18 @@ pub type Embedding = Vec<f32>;
 
 /// Type alias for the error type
 pub type Error = anyhow::Error;
+
+/// Helper to bridge `ort::Error<R>` (whose internal `NonNull<...>` is not
+/// `Send`/`Sync` as of `ort = 2.0.0-rc.12`) into `anyhow::Error` (which
+/// requires `Send + Sync + 'static`).  Stringifies the ort error via its
+/// `Display` impl so the resulting `anyhow::Error` is thread-safe.
+///
+/// Use as `.with_execution_providers(...).map_err(ort_err)?` at every
+/// call site that previously used `?` directly on an ort `Result`.
+#[inline]
+pub(crate) fn ort_err<R>(e: ort::Error<R>) -> anyhow::Error {
+    anyhow::anyhow!("{e}")
+}
 
 // Tokenizer files for "bring your own" models
 #[derive(Debug, Clone, PartialEq, Eq)]

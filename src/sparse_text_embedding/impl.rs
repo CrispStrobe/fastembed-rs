@@ -1,5 +1,5 @@
 #[cfg(feature = "hf-hub")]
-use crate::common::load_tokenizer_hf_hub;
+use crate::common::{load_tokenizer_hf_hub, ort_err};
 use crate::{
     models::sparse::{models_list, SparseModel},
     ModelInfo, SparseEmbedding,
@@ -67,9 +67,12 @@ impl SparseTextEmbedding {
         }
 
         let session = Session::builder()?
-            .with_execution_providers(execution_providers)?
-            .with_optimization_level(GraphOptimizationLevel::Level3)?
-            .with_intra_threads(threads)?
+            .with_execution_providers(execution_providers)
+            .map_err(ort_err)?
+            .with_optimization_level(GraphOptimizationLevel::Level3)
+            .map_err(ort_err)?
+            .with_intra_threads(threads)
+            .map_err(ort_err)?
             .commit_from_file(model_file_reference)?;
 
         let tokenizer = load_tokenizer_hf_hub(model_repo, max_length)?;
@@ -103,8 +106,7 @@ impl SparseTextEmbedding {
 
         let model_code = model.to_string();
         let all_dirs = get_cache_dirs();
-        let effective_dir = find_model_cache_dir(&model_code, &all_dirs)
-            .unwrap_or(cache_dir);
+        let effective_dir = find_model_cache_dir(&model_code, &all_dirs).unwrap_or(cache_dir);
         pull_from_hf(model_code, effective_dir, show_download_progress)
     }
 
