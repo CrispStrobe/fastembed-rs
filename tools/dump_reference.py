@@ -80,6 +80,16 @@ def import_deps():
     return torch, AutoConfig, AutoModel, AutoTokenizer, snapshot_download, save_file
 
 
+def import_st_deps():
+    """SentenceTransformers reference path for LoRA-adapter models like
+    JinaV3 that need `.encode(task='retrieval.passage')` rather than bare
+    AutoModel.forward+pool — bare forward applies no LoRA adapter."""
+    from sentence_transformers import SentenceTransformer
+    from huggingface_hub import snapshot_download
+    from safetensors.numpy import save_file
+    return SentenceTransformer, snapshot_download, save_file
+
+
 def parse_extra_input(spec: str) -> tuple[str, np.ndarray]:
     """Parse '--extra-input task_id=1' -> ('task_id', 0-D int64 array)."""
     import ast
@@ -144,6 +154,19 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--text-prefix", default="",
                    help="Prepended to every text before tokenization (rare).")
     p.add_argument("--max-length", type=int, default=512)
+    p.add_argument("--extra-texts", default=None, type=Path,
+                   help="Path to a UTF-8 text file with one extra probe text per line. "
+                        "Appended to the canonical TEXTS set.  Use to investigate "
+                        "single-sentence outliers (LEARNINGS Phase 9 #7) without changing "
+                        "the canonical fixtures.  Output filename should reflect the "
+                        "expanded set (e.g. JinaEmbeddingsV5Nano_extended).")
+    p.add_argument("--st-task", default=None,
+                   help="Use sentence_transformers.SentenceTransformer.encode(task=<TASK>) "
+                        "for the reference instead of bare AutoModel.forward + pool.  "
+                        "Required for LoRA-adapter models like JinaEmbeddingsV3 where "
+                        "bare AutoModel forwards skip the LoRA adapter.  Typical values: "
+                        "'retrieval.query', 'retrieval.passage', 'separation', "
+                        "'classification', 'text-matching'.")
 
     p.add_argument("--threshold", type=float, required=True,
                    help="Min cos_min the Rust test will assert. "
@@ -193,6 +216,17 @@ def main() -> int:
         commit = snap.name  # snapshot dir name == hash for local-only
 
     texts = [args.text_prefix + t for t in TEXTS] if args.text_prefix else list(TEXTS)
+    if args.extra_texts is not None:
+        if not args.extra_texts.exists():
+            print(f"ERROR: --extra-texts file not found: {args.extra_texts}", file=sys.stderr)
+            return 2
+        extra_lines = [
+            line for line in args.extra_texts.read_text().splitlines() if line.strip()
+        ]
+        if args.text_prefix:
+            extra_lines = [args.text_prefix + t for t in extra_lines]
+        texts.extend(extra_lines)
+        print(f"Appended {len(extra_lines)} extra texts from {args.extra_texts}")
     print(f"Tokenizing {len(texts)} texts (max_length={args.max_length}) ...")
     tok = AutoTokenizer.from_pretrained(str(snap), trust_remote_code=args.trust_remote_code)
     enc = tok(texts, padding=True, truncation=True, max_length=args.max_length,
@@ -200,32 +234,53 @@ def main() -> int:
     input_ids = enc["input_ids"].astype(np.int64)
     attention_mask = enc["attention_mask"].astype(np.int64)
 
-    print(f"Loading PyTorch model from {snap} ...")
-    config = AutoConfig.from_pretrained(str(snap), trust_remote_code=args.trust_remote_code)
-    for k, v in args.hf_config_overrides:
-        setattr(config, k, v)
-    if args.hf_config_overrides:
-        print(f"  config overrides: {dict(args.hf_config_overrides)}")
+    if args.st_task is not None:
+        # SentenceTransformers reference path (LoRA-adapter models like
+        # JinaV3).  Loads via SentenceTransformer (which applies the
+        # adapter for the given task), encodes texts, returns pre-pooled
+        # & pre-normalized vectors.  We un-normalize by undoing the unit
+        # norm — ST normalizes by default; we just preserve direction.
+        SentenceTransformer, _, _ = import_st_deps()
+        print(f"Loading SentenceTransformer({args.repo}, task={args.st_task}) ...")
+        st_model = SentenceTransformer(
+            str(snap),
+            trust_remote_code=args.trust_remote_code,
+            device="cpu",
+        )
+        # st_model.encode handles its own tokenization + adapter routing.
+        embeddings = st_model.encode(
+            texts,
+            task=args.st_task,
+            convert_to_numpy=True,
+            normalize_embeddings=False,
+        ).astype(np.float32)
+    else:
+        print(f"Loading PyTorch model from {snap} ...")
+        config = AutoConfig.from_pretrained(str(snap), trust_remote_code=args.trust_remote_code)
+        for k, v in args.hf_config_overrides:
+            setattr(config, k, v)
+        if args.hf_config_overrides:
+            print(f"  config overrides: {dict(args.hf_config_overrides)}")
 
-    model = AutoModel.from_pretrained(
-        str(snap),
-        config=config,
-        torch_dtype=torch.float32,
-        attn_implementation="eager",
-        trust_remote_code=args.trust_remote_code,
-    )
-    model.eval()
-    with torch.no_grad():
-        kwargs = {
-            "input_ids": torch.from_numpy(input_ids).long(),
-            "attention_mask": torch.from_numpy(attention_mask).long(),
-        }
-        if "token_type_ids" in enc:
-            kwargs["token_type_ids"] = torch.from_numpy(enc["token_type_ids"]).long()
-        out = model(**kwargs)
-        hidden = out.last_hidden_state.detach().cpu().numpy().astype(np.float32)
+        model = AutoModel.from_pretrained(
+            str(snap),
+            config=config,
+            torch_dtype=torch.float32,
+            attn_implementation="eager",
+            trust_remote_code=args.trust_remote_code,
+        )
+        model.eval()
+        with torch.no_grad():
+            kwargs = {
+                "input_ids": torch.from_numpy(input_ids).long(),
+                "attention_mask": torch.from_numpy(attention_mask).long(),
+            }
+            if "token_type_ids" in enc:
+                kwargs["token_type_ids"] = torch.from_numpy(enc["token_type_ids"]).long()
+            out = model(**kwargs)
+            hidden = out.last_hidden_state.detach().cpu().numpy().astype(np.float32)
 
-    embeddings = pool(hidden, attention_mask, args.pooling).astype(np.float32)
+        embeddings = pool(hidden, attention_mask, args.pooling).astype(np.float32)
     print(f"Reference embeddings: shape={embeddings.shape} dtype={embeddings.dtype}")
     print(f"  norm range: {np.linalg.norm(embeddings, axis=1).min():.4f}–"
           f"{np.linalg.norm(embeddings, axis=1).max():.4f}")
@@ -233,7 +288,7 @@ def main() -> int:
     metadata = {
         "model_repo": args.repo,
         "revision": commit,
-        "pooling": args.pooling,
+        "pooling": args.pooling if args.st_task is None else f"st:{args.st_task}",
         "threshold": str(args.threshold),
         "max_length": str(args.max_length),
         "text_prefix": args.text_prefix,

@@ -1,0 +1,167 @@
+# Aggregate registry of harness fixtures.
+#
+# Single source of truth for which upstream models the harness gates
+# against, at which pinned commit hash, and with what threshold.  Each
+# entry is also recorded inside its own safetensors file's metadata,
+# but this file collects them for review and pinning.
+#
+# Sections:
+#   [embedder.<key>] — used by `tests/cosine_parity.rs`
+#   [reranker.<key>] — used by `tests/reranker_parity.rs`
+#
+# `key` is the path stem of the fixture file (`tests/fixtures/<key>.safetensors`).
+# A single fixture is shared across all sibling quantized variants of one
+# model family (FP16, INT8, INT4, etc. all run against the same PyTorch
+# reference embedding).
+
+# =============================================================================
+# Embedder fixtures (cosine-parity)
+# =============================================================================
+
+[embedder.AllMiniLML6V2]
+file = "tests/fixtures/AllMiniLML6V2.safetensors"
+model_repo = "sentence-transformers/all-MiniLM-L6-v2"
+revision = "c9745ed1d9f207416be6d2e6f8de32d1f16199bf"
+pooling = "mean"
+threshold = 0.999
+notes = "Smoke-test fixture.  Validates harness math against a well-understood encoder. Onnx ships under Qdrant/all-MiniLM-L6-v2-onnx in fastembed-rs."
+
+[embedder.GteModernBertBase]
+file = "tests/fixtures/GteModernBertBaseQ.safetensors"
+model_repo = "Alibaba-NLP/gte-modernbert-base"
+revision = "e7f32e3c00f91d699e8c43b53106206bcc72bb22"
+pooling = "cls"
+threshold = 0.90
+gates = ["GteModernBertBaseQ", "GteModernBertBaseQ4F16"]
+notes = "Encoder INT8/Q4F16 — passes 0.94/0.97 vs PyTorch."
+
+[embedder.PixieRuneV1]
+file = "tests/fixtures/PixieRuneV1Q.safetensors"
+model_repo = "telepix/PIXIE-Rune-v1.0"
+revision = "091fe5a6682119cfc02451f37fdece163ddf38de"
+pooling = "cls"
+threshold = 0.90
+gates = ["PixieRuneV1Q"]
+notes = "PIXIE-Rune INT8.  Pooling: 1_Pooling/config.json says CLS (not mean as fastembed-rs originally had — fixed in PR #1)."
+
+[embedder.SnowflakeArcticEmbedMV2]
+file = "tests/fixtures/SnowflakeArcticEmbedMV2.safetensors"
+model_repo = "Snowflake/snowflake-arctic-embed-m-v2.0"
+revision = "95c2741480856aa9666782eb4afe11959938017f"
+pooling = "cls"
+threshold = 0.90
+hf_config_overrides = { use_memory_efficient_attention = false, unpad_inputs = false }
+gates = ["SnowflakeArcticEmbedMV2"]
+notes = "GTE custom code defaults to xformers memory_efficient_attention which only supports CUDA+FP16/BF16; override on CPU for ground truth."
+
+[embedder.OctenEmbedding0_6B]
+file = "tests/fixtures/Octen.safetensors"
+model_repo = "Octen/Octen-Embedding-0.6B"
+revision = "d715b32ee68f057b54dff09fc93c23485bc403d3"
+pooling = "last_token"
+threshold = 0.90
+threshold_overrides = { OctenEmbedding0_6BFp16 = 0.99 }
+gates = ["OctenEmbedding0_6BFp16", "OctenEmbedding0_6BInt8", "OctenEmbedding0_6BInt4Full"]
+notes = "Decoder LLM (Qwen3-0.6B fine-tune).  Int8 is SmoothQuant α=0.8 (vanilla quantize_dynamic collapsed to cos_min=0.64 on the German Klimawandel sentence — see harness rejection on 2026-05-03; SmoothQuant recovers cos_min=0.987).  Requires ORT >= 1.23 for the Int8 variant — branch probe/ort-rc12."
+
+[embedder.F2LlmV2_0_6B]
+file = "tests/fixtures/F2LLM.safetensors"
+model_repo = "codefuse-ai/F2LLM-v2-0.6B"
+revision = "3e37e952adf836f3bb79686dedeb2fc84cac67bb"
+pooling = "last_token"
+threshold = 0.90
+threshold_overrides = { F2LlmV2_0_6BFp16 = 0.99 }
+gates = ["F2LlmV2_0_6BFp16", "F2LlmV2_0_6BInt8"]
+notes = "Decoder LLM (Qwen3-1024d fine-tune).  Int8 is SmoothQuant α=0.8; vanilla collapses to cos_min=0.26.  Requires ORT >= 1.23 for the Int8 variant.  Note F2LlmV2_0_6BInt4 currently absent — pending SmoothQuant + INT4 MatMulNBits rebuild (LEARNINGS Phase 9 #1)."
+
+[embedder.JinaEmbeddingsV5Small]
+file = "tests/fixtures/JinaEmbeddingsV5Small.safetensors"
+model_repo = "jinaai/jina-embeddings-v5-text-small-retrieval"
+revision = "6856e76bb72982e58de0620458a4e8b3614da340"
+pooling = "last_token"
+threshold = 0.90
+threshold_overrides = { JinaEmbeddingsV5SmallFp16 = 0.99 }
+gates = ["JinaEmbeddingsV5SmallFp16", "JinaEmbeddingsV5SmallInt8"]
+notes = "Asymmetric retrieval prefixes ('Query: ' / 'Document: ') NOT applied to the canonical TEXTS — fastembed-rs's embed() doesn't auto-prefix either, so harness math is consistent."
+
+[embedder.HarrierOSSV1_270M]
+file = "tests/fixtures/HarrierOSSV1_270M.safetensors"
+model_repo = "microsoft/harrier-oss-v1-270m"
+revision = "31de22b673913c7d658c0f03f792d77c2dcf8ebd"
+pooling = "last_token"
+threshold = 0.99
+gates = ["HarrierOSSV1_270MQ"]
+notes = "ONNX uses GatherBlockQuantized.bits — requires ORT >= 1.23.  HarrierOSSV1_270M (FP32) ships via exact-checksum on main and re-uses this fixture if cosine-parity gating is added later."
+
+# =============================================================================
+# Reranker fixtures (Spearman + per-group ranking-order)
+# =============================================================================
+
+[reranker.MxbaiRerankXsmallV1]
+file = "tests/fixtures/reranker__MxbaiRerankXsmallV1.safetensors"
+model_repo = "mixedbread-ai/mxbai-rerank-xsmall-v1"
+revision = "b5c6e9da73abc3711f593f705371cdbe9e0fe422"
+score_convention = "logit_1class"
+threshold_spearman = 0.9
+gates = ["MxbaiRerankXsmallV1", "MxbaiRerankXsmallV1Q"]
+
+[reranker.MxbaiRerankBaseV1]
+file = "tests/fixtures/reranker__MxbaiRerankBaseV1.safetensors"
+model_repo = "mixedbread-ai/mxbai-rerank-base-v1"
+revision = "800f24c113213a187e65bde9db00c15a2bb12738"
+score_convention = "logit_1class"
+threshold_spearman = 0.9
+gates = ["MxbaiRerankBaseV1", "MxbaiRerankBaseV1Q"]
+notes = "BaseQ is borderline-multilingual (Spearman 0.938 per LEARNINGS); Spearman threshold 0.9 accepts it."
+
+[reranker.MxbaiRerankLargeV1]
+file = "tests/fixtures/reranker__MxbaiRerankLargeV1.safetensors"
+model_repo = "mixedbread-ai/mxbai-rerank-large-v1"
+revision = "98f655841d5caf0b16eaff79c2b4ca109d920d17"
+score_convention = "logit_1class"
+threshold_spearman = 0.9
+gates = ["MxbaiRerankLargeV1", "MxbaiRerankLargeV1Q"]
+notes = "LargeQ borderline (Spearman 0.918)."
+
+[reranker.GteRerankerModernBertBase]
+file = "tests/fixtures/reranker__GteRerankerModernBertBase.safetensors"
+model_repo = "Alibaba-NLP/gte-reranker-modernbert-base"
+revision = "f7481e6055501a30fb19d090657df9ec1f79ab2c"
+score_convention = "logit_1class"
+threshold_spearman = 0.9
+gates = ["GteRerankerModernBertBase", "GteRerankerModernBertBaseQ", "GteRerankerModernBertBaseQ4F16"]
+notes = "Q4F16 requires ORT >= 1.23 (graph init).  Q is English-only (per-group Spearman drops to ~0.8 on non-English queries — but global Spearman ≥ 0.9)."
+
+[reranker.JINARerankerV2BaseMultilingual]
+file = "tests/fixtures/reranker__JINARerankerV2BaseMultiligual.safetensors"
+model_repo = "jinaai/jina-reranker-v2-base-multilingual"
+revision = "9cfeff2df7d40d1b78e75e5e9cebec92a99813c9"
+score_convention = "logit_1class"
+threshold_spearman = 0.9
+gates = ["JINARerankerV2BaseMultiligual", "JINARerankerV2BaseMultilingualInt8", "JINARerankerV2BaseMultilingualFp16"]
+notes = "Reference picks English over German on the Mitose group — that is PyTorch's actual behaviour (multilingual reranker preferring better-attested English text); ref_top1 reflects this and ONNX is gated against ref_top1, not the hardcoded expected_top1.  Fp16 requires ORT >= 1.23."
+
+[reranker.LlamaNemotronRerank1BV2]
+file = "tests/fixtures/reranker__LlamaNemotronRerank1BV2.safetensors"
+model_repo = "nvidia/llama-nemotron-rerank-1b-v2"
+score_convention = "logit_1class"
+threshold_spearman = 0.9
+gates = ["LlamaNemotronRerank1BV2", "LlamaNemotronRerank1BV2Int4Full"]
+notes = "Int8 was DROPPED entirely (Spearman 0.49, ranking collapse — Qwen3-style outlier on LLaMA-3.2).  Int4Full preserves dynamic range better (Spearman 0.944).  Requires ORT >= 1.23 for Int4Full's GatherBlockQuantized."
+
+# Zerank ZerankSmall{,Int8,Int4} — fixture pending.  Upstream HF repo's
+# modeling code has a TF dependency that blocks AutoModel.from_pretrained
+# without TF installed.  `tools/dump_reranker_reference.py` now supports
+# `--reference-onnx` + `--prompt-template` modes for this case (commit
+# fa9043c on probe/ort-rc12); local fixture dump deferred to a clean
+# machine.
+#
+# [reranker.ZerankSmall]
+# file = "tests/fixtures/reranker__ZerankSmall.safetensors"
+# model_repo = "zeroentropy/zerank-1-small"
+# reference_kind = "onnx_fp32"
+# reference_onnx = "cstr/zerank-1-small-ONNX/model.onnx"
+# prompt_template = "<|im_start|>user\nQuery: {query}\nDocument: {doc}\nRelevant:<|im_end|>\n<|im_start|>assistant\n"
+# score_convention = "onnx_fp32:logit_1class"
+# threshold_spearman = 0.9
+# gates = ["ZerankSmall", "ZerankSmallInt8", "ZerankSmallInt4"]
