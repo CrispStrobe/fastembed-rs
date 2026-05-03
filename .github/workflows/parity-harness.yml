@@ -1,8 +1,24 @@
-name: "Cargo Tests"
+name: "Parity Harness (cosine + reranker)"
+
+# Heavy harness — downloads ~30 GB of ONNX weights from HF and runs through
+# every fixture in tests/cosine_parity.rs and tests/reranker_parity.rs.
+# Manual trigger + weekly Sunday cron.  NOT run on every PR (see test.yml).
+
 on:
-  pull_request:
-  push:
-    branches: [main, probe/ort-rc12]
+  workflow_dispatch:
+    inputs:
+      which:
+        description: "Which harness to run"
+        required: true
+        default: "both"
+        type: choice
+        options:
+          - both
+          - cosine_parity
+          - reranker_parity
+  schedule:
+    # Sundays 04:00 UTC — runs on the default branch
+    - cron: '0 4 * * 0'
 
 env:
   CARGO_TERM_COLOR: always
@@ -10,8 +26,9 @@ env:
   ONNX_VERSION: v1.24.4
 
 jobs:
-  test:
+  parity:
     runs-on: ubuntu-latest
+    timeout-minutes: 90
 
     steps:
       - uses: actions/checkout@v3
@@ -19,10 +36,9 @@ jobs:
       - name: Free Disk Space
         uses: jlumbroso/free-disk-space@54081f138730dfa15788a46383842cd2f914a1be # v1.3.1
         with:
-          # this might remove tools that are actually needed,
           tool-cache: false
 
-      - name: Restore Builds
+      - name: Restore ORT build cache
         id: cache-build-restore
         uses: actions/cache/restore@v4
         with:
@@ -39,34 +55,21 @@ jobs:
           ./build.sh --update --build --config Release --parallel --compile_no_warning_as_error --skip_submodule_sync
           cd ..
 
-      # The cosine_parity / reranker_parity harnesses download multi-GB ONNX
-      # weights (SmoothQuant decoder LLMs, V5 Small, Zerank 1.7B, etc.) and
-      # take 15+ minutes each.  They run under `parity-harness.yml` (manual /
-      # scheduled), not on every PR.
-      - name: Cargo Test With Release Build
+      - name: Cosine Parity
+        if: ${{ github.event_name == 'schedule' || inputs.which == 'both' || inputs.which == 'cosine_parity' }}
         run: |
           ORT_LIB_LOCATION="$(pwd)/onnxruntime/build/Linux/Release" \
           cargo test --release --no-default-features --features hf-hub-native-tls,image-models \
-            -- \
-            --skip cosine_parity_against_pytorch_reference \
-            --skip reranker_parity_against_pytorch_reference
+            --test cosine_parity -- --nocapture
 
-      - name: Cargo Test Offline
+      - name: Reranker Parity
+        if: ${{ github.event_name == 'schedule' || inputs.which == 'both' || inputs.which == 'reranker_parity' }}
         run: |
           ORT_LIB_LOCATION="$(pwd)/onnxruntime/build/Linux/Release" \
-          cargo test --no-default-features --features image-models \
-            -- \
-            --skip cosine_parity_against_pytorch_reference \
-            --skip reranker_parity_against_pytorch_reference
+          cargo test --release --no-default-features --features hf-hub-native-tls,image-models \
+            --test reranker_parity -- --nocapture
 
-      - name: Cargo Clippy
-        run: cargo clippy
-
-      - name: Cargo FMT
-        run: cargo fmt --all -- --check
-
-      - name: Always Save Cache
-        id: cache-build-save
+      - name: Always Save ORT Cache
         if: always() && steps.cache-build-restore.outputs.cache-hit != 'true'
         uses: actions/cache/save@v4
         with:
