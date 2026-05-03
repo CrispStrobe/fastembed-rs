@@ -99,14 +99,12 @@ fn verify_embeddings(model: &EmbeddingModel, embeddings: &[Embedding]) -> Result
         }
         EmbeddingModel::SnowflakeArcticEmbedL => [0.4049112, 0.42825335, 0.46401042, 0.4064963],
         EmbeddingModel::SnowflakeArcticEmbedLQ => [0.40164998, 0.4278314, 0.4612437, 0.40060186],
-        EmbeddingModel::SnowflakeArcticEmbedLV2 => [0.26398557, 0.14880744, 0.13180876, 0.30424863],
+        // SnowflakeArcticEmbedLV2 + Octen Int4 + PixieRune Int4{,Full} +
+        // JinaV5Nano: exempted in the cosine-parity arm below — checksums of
+        // INT8/INT4 outputs aren't portable across ORT versions.
         EmbeddingModel::OctenEmbedding0_6BFp32 => [-1.1679014, 1.0701674, 0.56380516, 1.4149448],
-        EmbeddingModel::OctenEmbedding0_6BInt4 => [-0.75334597, 1.1573822, 0.30589685, 1.5168501],
         EmbeddingModel::PixieRuneV1 => [0.2288776, 0.19070691, 0.14142901, 0.32406387],
-        EmbeddingModel::PixieRuneV1Int4 => [0.2858223, 0.22058362, 0.15294152, 0.31341535],
-        EmbeddingModel::PixieRuneV1Int4Full => [0.28613043, 0.21900642, 0.15266025, 0.31067854],
         EmbeddingModel::JinaEmbeddingsV3 => [0.15385337, 0.06172323, -0.04699665, 0.38967043],
-        EmbeddingModel::JinaEmbeddingsV5Nano => [-0.13502984, -0.39609835, 1.71589792, 0.97652829],
         EmbeddingModel::JinaEmbeddingsV5Small => [0.91580373, 0.46739948, -1.1745838, 1.3157014],
         EmbeddingModel::GteModernBertBase => [0.3135964, 0.43796015, 0.33252144, 0.3145709],
         EmbeddingModel::F2LlmV2_0_6BFp32 => [-0.60010016, -1.2393193, -0.6907619, 1.3460654],
