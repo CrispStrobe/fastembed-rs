@@ -112,13 +112,24 @@ pub struct TokenizerFiles {
 
 /// The procedure for loading tokenizer files from the hugging face hub is separated
 /// from the main load_tokenizer function (which is expecting bytes, from any source).
+///
+/// `special_tokens_map.json` is treated as optional: many ONNX-only repos
+/// (e.g. `onnx-community/harrier-oss-v1-270m-ONNX`,
+/// `jinaai/jina-embeddings-v5-text-nano-retrieval`,
+/// `cstr/jina-embeddings-v5-text-small-retrieval-onnx-int8`) do not ship it,
+/// and the special-token information is already embedded in `tokenizer.json`.
+/// When the file is absent, the parser receives `b"{}"` and skips the
+/// add_special_tokens loop — modern tokenizers don't need it.
 #[cfg(feature = "hf-hub")]
 pub fn load_tokenizer_hf_hub(model_repo: ApiRepo, max_length: usize) -> Result<Tokenizer> {
+    let special_tokens_map_file = match model_repo.get("special_tokens_map.json") {
+        Ok(path) => std::fs::read(&path)?,
+        Err(_) => b"{}".to_vec(),
+    };
     let tokenizer_files: TokenizerFiles = TokenizerFiles {
         tokenizer_file: std::fs::read(model_repo.get("tokenizer.json")?)?,
         config_file: std::fs::read(&model_repo.get("config.json")?)?,
-        special_tokens_map_file: std::fs::read(&model_repo.get("special_tokens_map.json")?)?,
-
+        special_tokens_map_file,
         tokenizer_config_file: std::fs::read(&model_repo.get("tokenizer_config.json")?)?,
     };
 
