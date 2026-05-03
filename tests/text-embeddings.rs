@@ -125,8 +125,10 @@ fn verify_embeddings(model: &EmbeddingModel, embeddings: &[Embedding]) -> Result
         | EmbeddingModel::PixieRuneV1Q
         | EmbeddingModel::SnowflakeArcticEmbedMV2
         | EmbeddingModel::OctenEmbedding0_6BFp16
+        | EmbeddingModel::OctenEmbedding0_6BInt8
         | EmbeddingModel::OctenEmbedding0_6BInt4Full
         | EmbeddingModel::F2LlmV2_0_6BFp16
+        | EmbeddingModel::F2LlmV2_0_6BInt8
         | EmbeddingModel::JinaEmbeddingsV5SmallFp16
         | EmbeddingModel::JinaEmbeddingsV5SmallInt8 => {
             // Validated via cosine-parity in tests/cosine_parity.rs.

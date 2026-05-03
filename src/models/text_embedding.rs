@@ -160,6 +160,12 @@ pub enum EmbeddingModel {
     /// Streaming FP32→FP16 export (W8A16-style); cos=1.000 vs PyTorch reference.
     /// Validated via cosine-parity harness at threshold 0.99.
     OctenEmbedding0_6BFp16,
+    /// cstr/Octen-Embedding-0.6B-ONNX-INT8 — last-token pooling, ~1.06 GB.
+    /// SmoothQuant α=0.8 + per-channel dynamic INT8; cos≈0.987 vs PyTorch.
+    /// Requires ORT ≥ 1.23 (`ort = 2.0.0-rc.12+`).  HF repo's vanilla INT8
+    /// is preserved as `model.int8.vanilla.onnx` for archival.
+    /// Validated via cosine-parity harness at threshold 0.90.
+    OctenEmbedding0_6BInt8,
     /// cstr/Octen-Embedding-0.6B-ONNX-INT4-FULL — INT4 MatMul + INT8 Gather (~434 MB).
     /// Validated via cosine-parity harness at threshold 0.90.
     OctenEmbedding0_6BInt4Full,
@@ -171,6 +177,14 @@ pub enum EmbeddingModel {
     /// Streaming FP32→FP16 export (W8A16-style); cos=1.000 vs PyTorch reference.
     /// Validated via cosine-parity harness at threshold 0.99.
     F2LlmV2_0_6BFp16,
+    /// cstr/F2LLM-v2-0.6B-ONNX-INT8 — last-token pooling, ~1.06 GB.
+    /// SmoothQuant α=0.8 + per-channel dynamic INT8; cos≈0.93 vs PyTorch.
+    /// Vanilla `quantize_dynamic` collapses to cos≈0.30 on Qwen3-class
+    /// decoder LLMs due to activation outliers; SmoothQuant migrates those
+    /// outliers into weights so per-channel dynamic INT8 then works.
+    /// Requires ORT ≥ 1.23 (`ort = 2.0.0-rc.12+`).
+    /// Validated via cosine-parity harness at threshold 0.90.
+    F2LlmV2_0_6BInt8,
 
     // ── Microsoft Harrier OSS v1 270M (decoder-only, last-token pooling) ─────
     /// onnx-community/harrier-oss-v1-270m-ONNX — 640d, multilingual, decoder-only architecture
@@ -660,6 +674,19 @@ fn init_models_map() -> HashMap<EmbeddingModel, ModelInfo<EmbeddingModel>> {
             output_key: None,
         },
         ModelInfo {
+            model: EmbeddingModel::OctenEmbedding0_6BInt8,
+            dim: 1024,
+            description: String::from(
+                "Octen-Embedding-0.6B INT8 — 1024d, 32k context, last-token pooling. \
+                 SmoothQuant (alpha=0.8) + per-channel dynamic INT8; cos≈0.987 vs PyTorch \
+                 reference, ~1.06 GB. Requires ORT >= 1.23 (`ort = 2.0.0-rc.12+`).",
+            ),
+            model_code: String::from("cstr/Octen-Embedding-0.6B-ONNX-INT8"),
+            model_file: String::from("model.int8.onnx"),
+            additional_files: vec!["model.int8.onnx.data".to_string()],
+            output_key: None,
+        },
+        ModelInfo {
             model: EmbeddingModel::OctenEmbedding0_6BInt4Full,
             dim: 1024,
             description: String::from(
@@ -776,6 +803,19 @@ fn init_models_map() -> HashMap<EmbeddingModel, ModelInfo<EmbeddingModel>> {
             model_code: String::from("cstr/F2LLM-v2-0.6B-ONNX-FP16"),
             model_file: String::from("model.fp16.onnx"),
             additional_files: vec!["model.fp16.onnx.data".to_string()],
+            output_key: None,
+        },
+        ModelInfo {
+            model: EmbeddingModel::F2LlmV2_0_6BInt8,
+            dim: 1024,
+            description: String::from(
+                "F2LLM-v2-0.6B INT8 — 1024d, 32k context, last-token pooling. \
+                 SmoothQuant (alpha=0.8) + per-channel dynamic INT8; cos≈0.93 vs PyTorch \
+                 reference, ~1.06 GB.  Requires ORT >= 1.23 (`ort = 2.0.0-rc.12+`).",
+            ),
+            model_code: String::from("cstr/F2LLM-v2-0.6B-ONNX-INT8"),
+            model_file: String::from("model.int8.onnx"),
+            additional_files: vec!["model.int8.onnx.data".to_string()],
             output_key: None,
         },
         // ── Jina Embeddings v3 ───────────────────────────────────────────────────

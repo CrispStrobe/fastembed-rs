@@ -82,12 +82,13 @@ const FIXTURES: &[(EmbeddingModel, &str, Option<f32>)] = &[
         "tests/fixtures/Octen.safetensors",
         Some(0.99), // FP16 should be near-lossless
     ),
-    // OctenEmbedding0_6BInt8 (SmoothQuant) deferred: harness measures
-    // cos_min=0.639 on the German "Klimawandel" sentence on this probe set
-    // (other 5 sentences pass at 0.86–0.92, mean=0.846). LEARNINGS's
-    // "cos≈0.987" was the mean, not the min. Drop until either (a) a
-    // larger probe set is adopted with documented borderline policy, or
-    // (b) the SmoothQuant recipe is re-tuned for the German-outlier case.
+    // SmoothQuant α=0.8: re-uploaded to HF 2026-05-03 (Python ORT 1.25 verified
+    // cos_min=0.987).  Requires ORT >= 1.23 (this branch ships ort=2.0.0-rc.12).
+    (
+        EmbeddingModel::OctenEmbedding0_6BInt8,
+        "tests/fixtures/Octen.safetensors",
+        None,
+    ),
     (
         EmbeddingModel::OctenEmbedding0_6BInt4Full,
         "tests/fixtures/Octen.safetensors",
@@ -99,12 +100,13 @@ const FIXTURES: &[(EmbeddingModel, &str, Option<f32>)] = &[
         "tests/fixtures/F2LLM.safetensors",
         Some(0.99),
     ),
-    // F2LlmV2_0_6BInt8 dropped: harness measures cos_min=0.263 / cos_mean=0.426,
-    // matching LEARNINGS's *vanilla* INT8 numbers (0.304 / 0.423), NOT the
-    // SmoothQuant numbers (cos_min=0.93). The HF repo cstr/F2LLM-v2-0.6B-ONNX-INT8
-    // currently hosts the broken vanilla export; either the SmoothQuant re-upload
-    // never happened or was reverted. Re-add only after the repo is re-uploaded
-    // with the SmoothQuant artifact and the harness re-runs above 0.90.
+    // SmoothQuant α=0.8: re-uploaded to HF 2026-05-03 (Python ORT 1.25 verified
+    // cos_min=0.93).  Requires ORT >= 1.23.
+    (
+        EmbeddingModel::F2LlmV2_0_6BInt8,
+        "tests/fixtures/F2LLM.safetensors",
+        None,
+    ),
     // ── Jina v5 text-small siblings
     (
         EmbeddingModel::JinaEmbeddingsV5SmallFp16,

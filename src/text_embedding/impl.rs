@@ -318,11 +318,13 @@ impl TextEmbedding {
             // Decoder-style models: take the last non-padding token
             EmbeddingModel::OctenEmbedding0_6BFp32 => Some(Pooling::LastToken),
             EmbeddingModel::OctenEmbedding0_6BFp16 => Some(Pooling::LastToken),
+            EmbeddingModel::OctenEmbedding0_6BInt8 => Some(Pooling::LastToken),
             EmbeddingModel::OctenEmbedding0_6BInt4 => Some(Pooling::LastToken),
             EmbeddingModel::OctenEmbedding0_6BInt4Full => Some(Pooling::LastToken),
             // F2LLM-v2-0.6B: same Qwen3 decoder architecture, last-token pooling
             EmbeddingModel::F2LlmV2_0_6BFp32 => Some(Pooling::LastToken),
             EmbeddingModel::F2LlmV2_0_6BFp16 => Some(Pooling::LastToken),
+            EmbeddingModel::F2LlmV2_0_6BInt8 => Some(Pooling::LastToken),
             // Jina v5 text-small: Qwen3-0.6B decoder, last-token pooling
             EmbeddingModel::JinaEmbeddingsV5Small => Some(Pooling::LastToken),
             EmbeddingModel::JinaEmbeddingsV5SmallFp16 => Some(Pooling::LastToken),
