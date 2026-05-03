@@ -82,12 +82,12 @@ const FIXTURES: &[(EmbeddingModel, &str, Option<f32>)] = &[
         "tests/fixtures/Octen.safetensors",
         Some(0.99), // FP16 should be near-lossless
     ),
-    // OctenEmbedding0_6BInt8 (SmoothQuant) deferred: harness measures
-    // cos_min=0.639 on the German "Klimawandel" sentence on this probe set
-    // (other 5 sentences pass at 0.86–0.92, mean=0.846). LEARNINGS's
-    // "cos≈0.987" was the mean, not the min. Drop until either (a) a
-    // larger probe set is adopted with documented borderline policy, or
-    // (b) the SmoothQuant recipe is re-tuned for the German-outlier case.
+    // OctenEmbedding0_6BInt8 (SmoothQuant) deferred: HF artifact correct
+    // (cos≈0.987 in Python ORT 1.25), but fastembed-rs ships ort=2.0.0-rc.11
+    // (ORT 1.22) which fails session init on the SmoothQuant graph
+    // ("Encountered unknown exception in Initialize()"). Re-add after the
+    // ort crate bumps to rc.12+ (ORT 1.24) — same blocker as HarrierQ per
+    // LEARNINGS Phase 7.
     (
         EmbeddingModel::OctenEmbedding0_6BInt4Full,
         "tests/fixtures/Octen.safetensors",
@@ -99,12 +99,13 @@ const FIXTURES: &[(EmbeddingModel, &str, Option<f32>)] = &[
         "tests/fixtures/F2LLM.safetensors",
         Some(0.99),
     ),
-    // F2LlmV2_0_6BInt8 dropped: harness measures cos_min=0.263 / cos_mean=0.426,
-    // matching LEARNINGS's *vanilla* INT8 numbers (0.304 / 0.423), NOT the
-    // SmoothQuant numbers (cos_min=0.93). The HF repo cstr/F2LLM-v2-0.6B-ONNX-INT8
-    // currently hosts the broken vanilla export; either the SmoothQuant re-upload
-    // never happened or was reverted. Re-add only after the repo is re-uploaded
-    // with the SmoothQuant artifact and the harness re-runs above 0.90.
+    // F2LlmV2_0_6BInt8 (SmoothQuant) deferred: HF artifact correct
+    // (cos≈0.93 in Python ORT 1.25), but fastembed-rs ships ort=2.0.0-rc.11
+    // (ORT 1.22) which fails session init on the SmoothQuant graph
+    // ("Encountered unknown exception in Initialize()"). Re-add after the
+    // ort crate bumps to rc.12+ — same blocker as HarrierQ per LEARNINGS
+    // Phase 7. The 191 source-compat errors of the rc.12 migration are
+    // tracked in a separate `probe/ort-rc12` branch.
     // ── Jina v5 text-small siblings
     (
         EmbeddingModel::JinaEmbeddingsV5SmallFp16,
