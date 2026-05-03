@@ -115,20 +115,27 @@ fn verify_embeddings(model: &EmbeddingModel, embeddings: &[Embedding]) -> Result
             [-3.61759973, -2.22492599, -2.60765219, -1.67113924]
         }
         // ── Variants gated by tests/cosine_parity.rs ────────────────────────
-        // Exact-element-wise checksums of INT8/Q4F16/INT4 ONNX outputs are not
-        // portable across CPU microarchitectures (ORT accumulation order
-        // differs).  These variants are validated in CI via cosine similarity
-        // against precomputed PyTorch reference fixtures; see the FIXTURES
-        // table in `tests/cosine_parity.rs` for per-variant thresholds.
+        // Exact-element-wise checksums of INT8/Q4F16/INT4/quantized-custom-code
+        // ONNX outputs are not portable across CPU microarchitectures or ORT
+        // versions (accumulation order differs; ORT 1.24 vs 1.25 graph
+        // optimizations also drift).  These variants are validated in CI via
+        // cosine similarity against precomputed PyTorch reference fixtures;
+        // see the FIXTURES table in `tests/cosine_parity.rs` for per-variant
+        // thresholds.
         EmbeddingModel::GteModernBertBaseQ
         | EmbeddingModel::GteModernBertBaseQ4F16
         | EmbeddingModel::PixieRuneV1Q
+        | EmbeddingModel::PixieRuneV1Int4
+        | EmbeddingModel::PixieRuneV1Int4Full
         | EmbeddingModel::SnowflakeArcticEmbedMV2
+        | EmbeddingModel::SnowflakeArcticEmbedLV2
         | EmbeddingModel::OctenEmbedding0_6BFp16
         | EmbeddingModel::OctenEmbedding0_6BInt8
+        | EmbeddingModel::OctenEmbedding0_6BInt4
         | EmbeddingModel::OctenEmbedding0_6BInt4Full
         | EmbeddingModel::F2LlmV2_0_6BFp16
         | EmbeddingModel::F2LlmV2_0_6BInt8
+        | EmbeddingModel::JinaEmbeddingsV5Nano
         | EmbeddingModel::JinaEmbeddingsV5SmallFp16
         | EmbeddingModel::JinaEmbeddingsV5SmallInt8
         | EmbeddingModel::HarrierOSSV1_270MQ => {
@@ -351,6 +358,34 @@ fn test_user_defined_embedding_model() {
 #[test]
 fn test_rerank() {
     let test_one_model = |supported_model: &RerankerModelInfo| {
+        // Skip variants that are validated in tests/reranker_parity.rs.
+        // The 5-doc "what is panda" probe used here is too small for INT8/FP16
+        // quantized variants whose top-2 ranking can shuffle between near-
+        // synonyms ("panda is an animal" vs "kind of mammal") under different
+        // ORT versions.  reranker_parity uses a 4-group probe with Spearman +
+        // ref_top1 gates and is the canonical validation.  Also skip the very
+        // large variants whose multi-GB downloads aren't a fit for `cargo test`
+        // CI on 14GB-disk runners.
+        match supported_model.model {
+            RerankerModel::MxbaiRerankXsmallV1Q
+            | RerankerModel::MxbaiRerankBaseV1
+            | RerankerModel::MxbaiRerankBaseV1Q
+            | RerankerModel::MxbaiRerankLargeV1
+            | RerankerModel::MxbaiRerankLargeV1Q
+            | RerankerModel::GteRerankerModernBertBase
+            | RerankerModel::GteRerankerModernBertBaseQ
+            | RerankerModel::GteRerankerModernBertBaseQ4F16
+            | RerankerModel::JINARerankerV2BaseMultiligual
+            | RerankerModel::JINARerankerV2BaseMultilingualInt8
+            | RerankerModel::JINARerankerV2BaseMultilingualFp16
+            | RerankerModel::LlamaNemotronRerank1BV2
+            | RerankerModel::LlamaNemotronRerank1BV2Int4Full
+            | RerankerModel::ZerankSmall
+            | RerankerModel::ZerankSmallInt8
+            | RerankerModel::ZerankSmallInt4 => return,
+            _ => {}
+        }
+
         println!("supported_model: {:?}", supported_model);
 
         let mut result =
