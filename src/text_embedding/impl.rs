@@ -285,6 +285,8 @@ impl TextEmbedding {
             EmbeddingModel::GTELargeENV15 => Some(Pooling::Cls),
             EmbeddingModel::GTELargeENV15Q => Some(Pooling::Cls),
             EmbeddingModel::GteModernBertBase => Some(Pooling::Cls),
+            EmbeddingModel::GteModernBertBaseQ => Some(Pooling::Cls),
+            EmbeddingModel::GteModernBertBaseQ4F16 => Some(Pooling::Cls),
 
             EmbeddingModel::ClipVitB32 => Some(Pooling::Mean),
 
@@ -322,10 +324,12 @@ impl TextEmbedding {
 
             // CLS pooling
             EmbeddingModel::SnowflakeArcticEmbedLV2 => Some(Pooling::Cls),
+            EmbeddingModel::SnowflakeArcticEmbedMV2 => Some(Pooling::Cls),
 
             // PIXIE-Rune uses CLS pooling (pooling_mode_cls_token: true in
             // 1_Pooling/config.json on the model repo).
             EmbeddingModel::PixieRuneV1 => Some(Pooling::Cls),
+            EmbeddingModel::PixieRuneV1Q => Some(Pooling::Cls),
             EmbeddingModel::PixieRuneV1Int4 => Some(Pooling::Cls),
             EmbeddingModel::PixieRuneV1Int4Full => Some(Pooling::Cls),
             // Jina v3: XLM-R + LoRA adapters. task_id=1 (retrieval.passage) is injected

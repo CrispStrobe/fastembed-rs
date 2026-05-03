@@ -42,10 +42,32 @@ use std::collections::HashMap;
 use std::path::Path;
 
 /// Registry: every fixture file → which `EmbeddingModel` variant runs against it.
-const FIXTURES: &[(EmbeddingModel, &str)] = &[(
-    EmbeddingModel::AllMiniLML6V2,
-    "tests/fixtures/AllMiniLML6V2.safetensors",
-)];
+///
+/// Multiple quantized siblings of one model can share a single fixture
+/// (the reference is the upstream PyTorch model; each sibling is run
+/// independently against that reference).
+const FIXTURES: &[(EmbeddingModel, &str)] = &[
+    (
+        EmbeddingModel::AllMiniLML6V2,
+        "tests/fixtures/AllMiniLML6V2.safetensors",
+    ),
+    (
+        EmbeddingModel::GteModernBertBaseQ,
+        "tests/fixtures/GteModernBertBaseQ.safetensors",
+    ),
+    (
+        EmbeddingModel::GteModernBertBaseQ4F16,
+        "tests/fixtures/GteModernBertBaseQ.safetensors",
+    ),
+    (
+        EmbeddingModel::PixieRuneV1Q,
+        "tests/fixtures/PixieRuneV1Q.safetensors",
+    ),
+    (
+        EmbeddingModel::SnowflakeArcticEmbedMV2,
+        "tests/fixtures/SnowflakeArcticEmbedMV2.safetensors",
+    ),
+];
 
 /// Parse an f32 tensor stored as little-endian bytes into a flat `Vec<f32>`.
 /// (Safetensors stores tensor data as packed bytes; the dtype tells us how to

@@ -71,6 +71,12 @@ pub enum EmbeddingModel {
     // ── GTE ModernBERT ──────────────────────────────────────────────────────
     /// Alibaba-NLP/gte-modernbert-base — 149M, 768d, 8192 tokens, CLS pooling (FP32, 596 MB)
     GteModernBertBase,
+    /// Alibaba-NLP/gte-modernbert-base INT8 — 149M, 768d, 8192 tokens, English, CLS pooling (150 MB).
+    /// Validated via cosine-parity harness (`tests/cosine_parity.rs`) at threshold 0.90.
+    GteModernBertBaseQ,
+    /// Alibaba-NLP/gte-modernbert-base Q4F16 — 149M, 768d, 8192 tokens, English, CLS pooling (140 MB).
+    /// Validated via cosine-parity harness at threshold 0.90.
+    GteModernBertBaseQ4F16,
     /// Qdrant/clip-ViT-B-32-text
     ClipVitB32,
     /// jinaai/jina-embeddings-v2-base-code
@@ -113,10 +119,16 @@ pub enum EmbeddingModel {
     // ── Snowflake Arctic Embed L v2 ───────────────────────────────────────────────
     /// Snowflake/snowflake-arctic-embed-l-v2.0 — quantized, 1024d, 8k context
     SnowflakeArcticEmbedLV2,
+    /// Snowflake/snowflake-arctic-embed-m-v2.0 — quantized, 768d, 8k context, GTE/CLS pooling.
+    /// Validated via cosine-parity harness at threshold 0.90.
+    SnowflakeArcticEmbedMV2,
 
     // ── PIXIE-Rune-v1.0 ──────────────────────────────────────────────────────────
     /// telepix/PIXIE-Rune-v1.0 — 1024d, 74 languages, 6k context (external data)
     PixieRuneV1,
+    /// INT8 quantized telepix/PIXIE-Rune-v1.0 — 1024d, 74 languages, 6k context (~542 MB).
+    /// Validated via cosine-parity harness at threshold 0.90.
+    PixieRuneV1Q,
     /// INT4 (MatMul) + INT8 (embeddings) quantized telepix/PIXIE-Rune-v1.0 — 1024d, 74 languages, 6k context
     PixieRuneV1Int4,
     /// Fully INT4 quantized telepix/PIXIE-Rune-v1.0 — INT4 MatMul + INT4 word embeddings, 337 MB
@@ -441,6 +453,28 @@ fn init_models_map() -> HashMap<EmbeddingModel, ModelInfo<EmbeddingModel>> {
             output_key: None,
         },
         ModelInfo {
+            model: EmbeddingModel::GteModernBertBaseQ,
+            dim: 768,
+            description: String::from(
+                "gte-modernbert-base INT8 — 149M, 768d, 8192 tokens, English, CLS pooling (150 MB)",
+            ),
+            model_code: String::from("Alibaba-NLP/gte-modernbert-base"),
+            model_file: String::from("onnx/model_quantized.onnx"),
+            additional_files: Vec::new(),
+            output_key: None,
+        },
+        ModelInfo {
+            model: EmbeddingModel::GteModernBertBaseQ4F16,
+            dim: 768,
+            description: String::from(
+                "gte-modernbert-base Q4F16 — 149M, 768d, 8192 tokens, English, CLS pooling (140 MB)",
+            ),
+            model_code: String::from("Alibaba-NLP/gte-modernbert-base"),
+            model_file: String::from("onnx/model_q4f16.onnx"),
+            additional_files: Vec::new(),
+            output_key: None,
+        },
+        ModelInfo {
             model: EmbeddingModel::ClipVitB32,
             dim: 512,
             description: String::from("CLIP text encoder based on ViT-B/32"),
@@ -617,6 +651,17 @@ fn init_models_map() -> HashMap<EmbeddingModel, ModelInfo<EmbeddingModel>> {
             additional_files: Vec::new(),
             output_key: None,
         },
+        ModelInfo {
+            model: EmbeddingModel::SnowflakeArcticEmbedMV2,
+            dim: 768,
+            description: String::from(
+                "Snowflake Arctic Embed M v2.0 — quantized, 768d, 8k context, GTE/CLS pooling",
+            ),
+            model_code: String::from("Snowflake/snowflake-arctic-embed-m-v2.0"),
+            model_file: String::from("onnx/model_quantized.onnx"),
+            additional_files: Vec::new(),
+            output_key: None,
+        },
         // ── PIXIE-Rune-v1.0 ──────────────────────────────────────────────────────
         ModelInfo {
             model: EmbeddingModel::PixieRuneV1,
@@ -627,6 +672,17 @@ fn init_models_map() -> HashMap<EmbeddingModel, ModelInfo<EmbeddingModel>> {
             model_code: String::from("telepix/PIXIE-Rune-v1.0"),
             model_file: String::from("onnx/model.onnx"),
             additional_files: vec!["onnx/model.onnx_data".to_string()],
+            output_key: None,
+        },
+        ModelInfo {
+            model: EmbeddingModel::PixieRuneV1Q,
+            dim: 1024,
+            description: String::from(
+                "PIXIE-Rune-v1.0 INT8 quantized — 1024d, 74 languages, 6k context (~542 MB)",
+            ),
+            model_code: String::from("cstr/PIXIE-Rune-v1.0-ONNX"),
+            model_file: String::from("onnx/model_quantized.onnx"),
+            additional_files: Vec::new(),
             output_key: None,
         },
         ModelInfo {

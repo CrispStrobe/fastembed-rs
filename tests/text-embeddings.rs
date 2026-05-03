@@ -114,6 +114,18 @@ fn verify_embeddings(model: &EmbeddingModel, embeddings: &[Embedding]) -> Result
         EmbeddingModel::Qwen3Embedding0_6BUint8 => {
             [-3.61759973, -2.22492599, -2.60765219, -1.67113924]
         }
+        // ── Variants gated by tests/cosine_parity.rs ────────────────────────
+        // Exact-element-wise checksums of INT8/Q4F16/INT4 ONNX outputs are not
+        // portable across CPU microarchitectures (ORT accumulation order
+        // differs).  These variants are validated in CI via cosine similarity
+        // against precomputed PyTorch reference fixtures; see the FIXTURES
+        // table in `tests/cosine_parity.rs` for per-variant thresholds.
+        EmbeddingModel::GteModernBertBaseQ
+        | EmbeddingModel::GteModernBertBaseQ4F16
+        | EmbeddingModel::PixieRuneV1Q
+        | EmbeddingModel::SnowflakeArcticEmbedMV2 => {
+            return Ok(());
+        }
     };
 
     let mismatched_indices = embeddings
