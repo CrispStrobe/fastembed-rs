@@ -109,9 +109,9 @@ fn verify_embeddings(model: &EmbeddingModel, embeddings: &[Embedding]) -> Result
         EmbeddingModel::GteModernBertBase => [0.3135964, 0.43796015, 0.33252144, 0.3145709],
         EmbeddingModel::F2LlmV2_0_6BFp32 => [-0.60010016, -1.2393193, -0.6907619, 1.3460654],
         EmbeddingModel::HarrierOSSV1_270M => [-1.2506653, -0.398214, -0.32943717, -1.5022918],
-        EmbeddingModel::Qwen3Embedding0_6BUint8 => {
-            [-3.61759973, -2.22492599, -2.60765219, -1.67113924]
-        }
+        // Qwen3Embedding0_6BUint8: uint8-quantized; checksum drifts on
+        // ORT 1.23 → 1.24 (electroglyph's affine dequant + ORT accumulation
+        // order).  Validated via tests/cosine_parity.rs cosine threshold.
         // ── Variants gated by tests/cosine_parity.rs ────────────────────────
         // Exact-element-wise checksums of INT8/Q4F16/INT4/quantized-custom-code
         // ONNX outputs are not portable across CPU microarchitectures or ORT
@@ -136,7 +136,8 @@ fn verify_embeddings(model: &EmbeddingModel, embeddings: &[Embedding]) -> Result
         | EmbeddingModel::JinaEmbeddingsV5Nano
         | EmbeddingModel::JinaEmbeddingsV5SmallFp16
         | EmbeddingModel::JinaEmbeddingsV5SmallInt8
-        | EmbeddingModel::HarrierOSSV1_270MQ => {
+        | EmbeddingModel::HarrierOSSV1_270MQ
+        | EmbeddingModel::Qwen3Embedding0_6BUint8 => {
             // Validated via cosine-parity in tests/cosine_parity.rs.
             return Ok(());
         }
