@@ -237,19 +237,20 @@ on rc.12 (reranker_parity pass1, 2026-05-03) Spearman=0.944, full top1 match.  \
 Required ORT >= 1.23 for Int4Full's GatherBlockQuantized; rc.12 ships ORT 1.24 \
 which works fine (unlike SmoothQuant Int8 / V5Small / HarrierQ which need ORT 1.25)."""
 
-# Zerank ZerankSmall{,Int8,Int4} — fixture pending.  Upstream HF repo's
-# modeling code has a TF dependency that blocks AutoModel.from_pretrained
-# without TF installed.  `tools/dump_reranker_reference.py` now supports
-# `--reference-onnx` + `--prompt-template` modes for this case (commit
-# fa9043c on probe/ort-rc12); local fixture dump deferred to a clean
-# machine.
-#
-# [reranker.ZerankSmall]
-# file = "tests/fixtures/reranker__ZerankSmall.safetensors"
-# model_repo = "zeroentropy/zerank-1-small"
-# reference_kind = "onnx_fp32"
-# reference_onnx = "cstr/zerank-1-small-ONNX/model.onnx"
-# prompt_template = "<|im_start|>user\nQuery: {query}\nDocument: {doc}\nRelevant:<|im_end|>\n<|im_start|>assistant\n"
-# score_convention = "onnx_fp32:logit_1class"
-# threshold_spearman = 0.9
-# gates = ["ZerankSmall", "ZerankSmallInt8", "ZerankSmallInt4"]
+[reranker.ZerankSmall]
+file = "tests/fixtures/reranker__ZerankSmall.safetensors"
+model_repo = "zeroentropy/zerank-1-small"
+reference_kind = "onnx_fp32"
+reference_onnx = "cstr/zerank-1-small-ONNX/model.onnx"
+prompt_template = "<|im_start|>user\nQuery: {query}\nDocument: {doc}\nRelevant:<|im_end|>\n<|im_start|>assistant\n"
+score_convention = "onnx_fp32:logit_1class"
+threshold_spearman = 0.9
+gates = ["ZerankSmall", "ZerankSmallInt8", "ZerankSmallInt4"]
+notes = """
+Upstream HF repo's modeling code has a TF dependency (`TFPreTrainedModel` import \
+in `integration_utils`), so `AutoModel.from_pretrained` can't load it without \
+TF installed.  Reference fixture generated 2026-05-03 via \
+`tools/dump_reranker_reference.py --reference-onnx <path-to-batched-fp32-onnx> \
+--prompt-template <qwen3-chat-format>` against the local cstr/zerank-1-small-ONNX \
+FP32 (3.4 GB, batch-broadcast patched).  ref_top1=[0,4,9,13].  Spearman=1.0 vs \
+itself by construction; ONNX variants tested against this same reference."""

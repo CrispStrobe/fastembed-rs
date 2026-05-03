@@ -131,15 +131,27 @@ const FIXTURES: &[(RerankerModel, &str, Option<f32>)] = &[
         "tests/fixtures/reranker__LlamaNemotronRerank1BV2.safetensors",
         None,
     ),
-    // ── zeroentropy/zerank-1-small (Qwen3 1.7B; FP32 + INT8 + INT4) ──
-    // NOT in FIXTURES: the upstream HF repo's modeling code has a TensorFlow
-    // dependency (`TFPreTrainedModel` import in `integration_utils`), so
-    // `AutoModel.from_pretrained` cannot load it without TF installed.
-    // LEARNINGS Phase 7 notes: "FP32 ONNX (HF code has TF dep)".  The
-    // existing `test_rerank` panda assertion in `tests/text-embeddings.rs`
-    // covers behavioural validation; cosine-parity needs `--reference-onnx`
-    // support in `dump_reranker_reference.py` to run against the FP32 ONNX
-    // instead of PyTorch — left as future work.
+    // ── zeroentropy/zerank-1-small (Qwen3 1.7B; FP32 + INT8 + INT4) ──────────
+    // Reference fixture generated 2026-05-03 via `tools/dump_reranker_reference.py`
+    // with `--reference-onnx` (the upstream HF repo has a TF dependency that blocks
+    // AutoModel.from_pretrained) and `--prompt-template` for Qwen3 chat formatting.
+    // ref_top1=[0,4,9,13]; matches the FP32 ONNX exactly because the reference
+    // *is* the FP32 ONNX.
+    (
+        RerankerModel::ZerankSmall,
+        "tests/fixtures/reranker__ZerankSmall.safetensors",
+        None,
+    ),
+    (
+        RerankerModel::ZerankSmallInt8,
+        "tests/fixtures/reranker__ZerankSmall.safetensors",
+        None,
+    ),
+    (
+        RerankerModel::ZerankSmallInt4,
+        "tests/fixtures/reranker__ZerankSmall.safetensors",
+        None,
+    ),
 ];
 
 #[derive(serde::Deserialize)]
