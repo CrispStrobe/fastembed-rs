@@ -14,7 +14,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v6
 
       - name: Free Disk Space
         uses: jlumbroso/free-disk-space@54081f138730dfa15788a46383842cd2f914a1be # v1.3.1
@@ -24,7 +24,7 @@ jobs:
 
       - name: Restore Builds
         id: cache-build-restore
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@v5
         with:
           key: '${{ runner.os }}-onnxruntime-${{ env.ONNX_VERSION }}'
           path: |
@@ -72,7 +72,7 @@ jobs:
       # The full 14-variant harness still runs under parity-harness.yml.
       - name: Restore HF smoke cache
         id: cache-hf-smoke-restore
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@v5
         with:
           key: ${{ runner.os }}-fastembed-hf-smoke-${{ hashFiles('tests/cosine_parity.rs', 'src/models/text_embedding.rs') }}
           restore-keys: |
@@ -91,7 +91,7 @@ jobs:
       - name: Always Save Cache
         id: cache-build-save
         if: always() && steps.cache-build-restore.outputs.cache-hit != 'true'
-        uses: actions/cache/save@v4
+        uses: actions/cache/save@v5
         with:
           key: '${{ steps.cache-build-restore.outputs.cache-primary-key }}'
           path: |
@@ -99,7 +99,7 @@ jobs:
 
       - name: Always Save HF smoke Cache
         if: always() && steps.cache-hf-smoke-restore.outputs.cache-hit != 'true'
-        uses: actions/cache/save@v4
+        uses: actions/cache/save@v5
         with:
           key: '${{ steps.cache-hf-smoke-restore.outputs.cache-primary-key }}'
           path: |

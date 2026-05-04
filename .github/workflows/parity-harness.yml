@@ -31,7 +31,7 @@ jobs:
     timeout-minutes: 90
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v6
 
       - name: Free Disk Space
         uses: jlumbroso/free-disk-space@54081f138730dfa15788a46383842cd2f914a1be # v1.3.1
@@ -40,7 +40,7 @@ jobs:
 
       - name: Restore ORT build cache
         id: cache-build-restore
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@v5
         with:
           key: '${{ runner.os }}-onnxruntime-${{ env.ONNX_VERSION }}'
           path: |
@@ -63,7 +63,7 @@ jobs:
       # via restore-keys when the key changes incrementally.
       - name: Restore HF blob cache
         id: cache-hf-restore
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@v5
         with:
           key: ${{ runner.os }}-fastembed-hf-${{ hashFiles('tests/cosine_parity.rs', 'tests/reranker_parity.rs', 'src/models/text_embedding.rs', 'src/models/reranking.rs') }}
           restore-keys: |
@@ -87,7 +87,7 @@ jobs:
 
       - name: Always Save ORT Cache
         if: always() && steps.cache-build-restore.outputs.cache-hit != 'true'
-        uses: actions/cache/save@v4
+        uses: actions/cache/save@v5
         with:
           key: '${{ steps.cache-build-restore.outputs.cache-primary-key }}'
           path: |
@@ -95,7 +95,7 @@ jobs:
 
       - name: Always Save HF blob Cache
         if: always() && steps.cache-hf-restore.outputs.cache-hit != 'true'
-        uses: actions/cache/save@v4
+        uses: actions/cache/save@v5
         with:
           key: '${{ steps.cache-hf-restore.outputs.cache-primary-key }}'
           path: |
