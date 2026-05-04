@@ -70,6 +70,10 @@ jobs:
       # (INT4 MatMulNBits), JinaEmbeddingsV3 (ST-task LoRA path).  Total
       # download ≲ 1.5 GB; runs in ~5 min once the HF blobs are cached.
       # The full 14-variant harness still runs under parity-harness.yml.
+      #
+      # Cache scoped to its own directory (`.fastembed_cache_smoke/`) so the
+      # earlier `Cargo Test With Release Build` step's downloads (which use
+      # the default `.fastembed_cache/`) don't bloat the smoke cache.
       - name: Restore HF smoke cache
         id: cache-hf-smoke-restore
         uses: actions/cache/restore@v5
@@ -78,11 +82,12 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-fastembed-hf-smoke-
           path: |
-            .fastembed_cache/
+            .fastembed_cache_smoke/
 
       - name: Cosine Parity Smoke
         env:
           COSINE_PARITY_SMOKE: '1'
+          FASTEMBED_CACHE_DIR: .fastembed_cache_smoke
         run: |
           ORT_LIB_LOCATION="$(pwd)/onnxruntime/build/Linux/Release" \
           cargo test --release --no-default-features --features hf-hub-native-tls,image-models \
@@ -103,4 +108,4 @@ jobs:
         with:
           key: '${{ steps.cache-hf-smoke-restore.outputs.cache-primary-key }}'
           path: |
-            .fastembed_cache/
+            .fastembed_cache_smoke/
