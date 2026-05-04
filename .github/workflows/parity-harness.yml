@@ -55,6 +55,22 @@ jobs:
           ./build.sh --update --build --config Release --parallel --compile_no_warning_as_error --skip_submodule_sync
           cd ..
 
+      # Cache the HF model blobs that the parity harness downloads (~5–6 GB
+      # of ONNX weights for the active fixture set).  Key on the test files
+      # that pin which models get downloaded: when FIXTURES change or when
+      # we wire up a new ModelInfo, the cache key changes and the next
+      # scheduled run re-downloads from HF.  Falls back to a previous cache
+      # via restore-keys when the key changes incrementally.
+      - name: Restore HF blob cache
+        id: cache-hf-restore
+        uses: actions/cache/restore@v4
+        with:
+          key: ${{ runner.os }}-fastembed-hf-${{ hashFiles('tests/cosine_parity.rs', 'tests/reranker_parity.rs', 'src/models/text_embedding.rs', 'src/models/reranking.rs') }}
+          restore-keys: |
+            ${{ runner.os }}-fastembed-hf-
+          path: |
+            .fastembed_cache/
+
       - name: Cosine Parity
         if: ${{ github.event_name == 'schedule' || inputs.which == 'both' || inputs.which == 'cosine_parity' }}
         run: |
@@ -76,3 +92,11 @@ jobs:
           key: '${{ steps.cache-build-restore.outputs.cache-primary-key }}'
           path: |
             onnxruntime/build/Linux/Release/
+
+      - name: Always Save HF blob Cache
+        if: always() && steps.cache-hf-restore.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          key: '${{ steps.cache-hf-restore.outputs.cache-primary-key }}'
+          path: |
+            .fastembed_cache/

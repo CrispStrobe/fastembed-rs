@@ -65,6 +65,29 @@ jobs:
       - name: Cargo FMT
         run: cargo fmt --all -- --check
 
+      # 4-variant cosine-parity smoke: AllMiniLML6V2 (FP32 baseline),
+      # GteModernBertBaseQ4F16 (Q4F16 path), OctenEmbedding0_6BInt4Full
+      # (INT4 MatMulNBits), JinaEmbeddingsV3 (ST-task LoRA path).  Total
+      # download ≲ 1.5 GB; runs in ~5 min once the HF blobs are cached.
+      # The full 14-variant harness still runs under parity-harness.yml.
+      - name: Restore HF smoke cache
+        id: cache-hf-smoke-restore
+        uses: actions/cache/restore@v4
+        with:
+          key: ${{ runner.os }}-fastembed-hf-smoke-${{ hashFiles('tests/cosine_parity.rs', 'src/models/text_embedding.rs') }}
+          restore-keys: |
+            ${{ runner.os }}-fastembed-hf-smoke-
+          path: |
+            .fastembed_cache/
+
+      - name: Cosine Parity Smoke
+        env:
+          COSINE_PARITY_SMOKE: '1'
+        run: |
+          ORT_LIB_LOCATION="$(pwd)/onnxruntime/build/Linux/Release" \
+          cargo test --release --no-default-features --features hf-hub-native-tls,image-models \
+            --test cosine_parity -- --nocapture
+
       - name: Always Save Cache
         id: cache-build-save
         if: always() && steps.cache-build-restore.outputs.cache-hit != 'true'
@@ -73,3 +96,11 @@ jobs:
           key: '${{ steps.cache-build-restore.outputs.cache-primary-key }}'
           path: |
             onnxruntime/build/Linux/Release/
+
+      - name: Always Save HF smoke Cache
+        if: always() && steps.cache-hf-smoke-restore.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          key: '${{ steps.cache-hf-smoke-restore.outputs.cache-primary-key }}'
+          path: |
+            .fastembed_cache/
