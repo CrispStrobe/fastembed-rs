@@ -1,17 +1,45 @@
 # German GECToR: conditional native ONNX backend
 
 Date: 2026-11-17. Branch: `feat/german-gector-proofing`.
-Status: roadmap only; engineering fallback after CrispEmbed Q4_K, not license-approved for shipping.
+Status: Rust roadmap only; selected CrispEmbed native lane implemented with passing bounded F32/mixed Q4_K controls; native ORT fallback distribution remains unapproved.
 Base: `d1500cdf248fc5447fb723f38e7cf3ee21b30487` from probe/ort-rc12.
 
 The [canonical Quds roadmap](https://github.com/CrispStrobe/quds_office_suite/blob/feat/german-gector-proofing/docs/roadmaps/german-gector-proofing.md) owns scope, model provenance,
 decoder behavior, backend decision and acceptance gates.
 
+The incoming default branch `probe/ort-rc12` at the base above is already an
+ancestor of this feature branch. The 17 November continuation required no
+additional default-branch merge and changes no Rust runtime, source version,
+dependency or release here.
+
+## Selected native lane implemented — 17 November 2026
+
+CrispEmbed now provides exact ONNX-to-GGUF conversion, a standalone prepared-input
+CPU C ABI and the declared mixed Q4_K artifact. Its
+[complete local evidence](https://github.com/CrispStrobe/quds_office_suite/blob/feat/german-gector-proofing/docs/validation/german-gector/2026-11-17-native/README.md)
+records passing F32 and mixed controls under corrected policy v2: both heads,
+all 30 cases / 40 saved passes, exact selected tags, unchanged upstream iterative
+corrections, and required 64/128/256-token shape/numerical gates. The 9/18 error
+fixes and 1/12 changed clean controls remain; the Swiss false edit and mixed
+candidate's failed fixed 0.002 absolute-error diagnostic are retained.
+
+The [optional Quds provider](https://github.com/CrispStrobe/quds_office_suite/tree/feat/german-gector-proofing/packages/quds_proofing_gector)
+adds shared Dart decoding/guards and an optional native adapter; final integration
+validation is in progress. Manual/F7 opt-in does not enable a default provider.
+Long-input, guarded application and target-device latency remain unqualified:
+the mixed 256-token forward median/p95 was 668/680 ms on the local host.
+The measured Linux build's complete source/system-library license receipt is
+retained; it does not establish an all-MIT binary or another platform's closure.
+This native result activates no Rust fallback and does not clear the strict
+native ORT distribution-license gate below. No Actions job was launched or
+awaited for this continuation.
+
 ## Bounded scope
 
 The bounded Dart round missed the complete-check latency budget. CrispEmbed
-Q4_K is the next qualification lane; activate this Rust fallback if that path
-fails its quality, performance or packaging gates, and this backend can satisfy
+Q4_K is the selected native lane, now implemented as recorded above. Activate
+this Rust fallback if that path fails its quality, performance or packaging
+gates, and this backend can satisfy
 the strict permissive-license boundary below. Provide a small dedicated
 grammar/session or prepared-input API using the existing ort/tokenizers stack. Reuse pinned file-based model loading but keep
 a grammar model separate from pooled/normalized embedding model registration.
@@ -28,7 +56,7 @@ a grammar model separate from pooled/normalized embedding model registration.
 
 ## Quantization
 
-The user prefers Q4_K, which belongs to the conditional CrispEmbed/ggml route.
+The user prefers Q4_K, which belongs to the selected CrispEmbed/ggml route.
 This backend runs ONNX; any MatMulNBits INT4 or other quantized candidate is
 separate and must be named and measured honestly. Preserve both classifier
 heads and qualify decoded quality, latency, artifact size and memory together.
@@ -103,9 +131,9 @@ Native complete reference correction had 33.2 ms p95, excluding application
 guards. The original hosted run used a different AMD CPU, so cross-run changes
 are not an isolated hardware-controlled code comparison.
 
-The next selected implementation/qualification target is the preferred
-CrispEmbed/ggml mixed Q4_K path. Retain this prepared-input native ORT plan as
-the fallback; it has promising measured engine behavior but still requires
+That decision selected the preferred CrispEmbed/ggml mixed Q4_K path, whose
+bounded native results are recorded above. Retain this prepared-input native
+ORT plan as the fallback; it has promising measured engine behavior but still requires
 the compatible API-24 runtime, its own parity run and an actual Dart FFI bridge.
 No Rust model/session, wrapper or shipping application has been implemented
 by this roadmap update.
@@ -128,4 +156,5 @@ notices; the measured 1.23.2 wheel is neither a version-matched substitute nor
 license clearance for another build. No compatible, fully permissive binary
 has been demonstrated by this work. Do not relax the user's license constraint
 to make the fallback available. CrispEmbed's controlled ggml/Q4_K target stays
-the preferred next lane, with its own artifact-level license qualification.
+the selected lane, with exact distribution and platform qualification still
+required beyond its recorded local build.
