@@ -1,7 +1,7 @@
 # German GECToR: conditional native ONNX backend
 
 Date: 2026-11-17. Branch: `feat/german-gector-proofing`.
-Status: roadmap only; implementation conditional on Dart qualification.
+Status: roadmap only; fallback after the selected CrispEmbed Q4_K qualification lane.
 Base: `d1500cdf248fc5447fb723f38e7cf3ee21b30487` from probe/ort-rc12.
 
 The [canonical Quds roadmap](https://github.com/CrispStrobe/quds_office_suite/blob/feat/german-gector-proofing/docs/roadmaps/german-gector-proofing.md) owns scope, model provenance,
@@ -9,9 +9,10 @@ decoder behavior, backend decision and acceptance gates.
 
 ## Bounded scope
 
-If onnx_runtime_dart fails the bounded resource/performance qualification,
-provide a small dedicated grammar/session or prepared-input API using the
-existing ort/tokenizers stack. Reuse pinned file-based model loading but keep
+The bounded Dart round missed the complete-check latency budget. CrispEmbed
+Q4_K is the next qualification lane; activate this Rust fallback if that path
+fails its quality, performance or packaging gates. Provide a small dedicated
+grammar/session or prepared-input API using the existing ort/tokenizers stack. Reuse pinned file-based model loading but keep
 a grammar model separate from pooled/normalized embedding model registration.
 
 - Accept exact token IDs/masks and preserve word/subword alignment.
@@ -50,8 +51,8 @@ the INT4 complete two-pass corrections were approximately 85-125 ms on these
 two short cases. This suggests a useful native fallback, but it is not a Rust
 benchmark or a qualified Dart FFI bridge. The selected Swiss false edit remains.
 The full [hosted qualification run](https://github.com/CrispStrobe/quds_office_suite/actions/runs/44053903485)
-is executing with final evidence review pending; retain the baseline's earlier
-queued-at-capture status unchanged.
+completed successfully; retain the local baseline's earlier queued-at-capture
+status unchanged. The optimized follow-up is recorded below.
 
 ### Version and prepared-input boundary
 
@@ -87,3 +88,23 @@ It is not Q4_K. Keep the preferred CrispEmbed Q4_K experiment and this fallback
 ordered by the backend decision, rather than implementing both concurrently.
 This update records source feasibility only; native Rust/FFI implementation,
 numerical parity, performance and platform qualification are still pending.
+
+## Measured decision after the optimized follow-up
+
+[Run 44062093617](https://github.com/CrispStrobe/quds_office_suite/actions/runs/44062093617)
+at Quds `69d153c0f81596af894e48e21880f0957b963994` and
+Dart `b10258682d459847b63e012eaaba58a528e93956` passed all 30 cases /
+40 saved passes and the explicit runtime-experiment integrity check.
+
+On that run's Intel CPU, the same ONNX INT4 candidate took 15.8/17.1 ms
+median/p95 per forward in native ORT, versus 463/546 ms in optimized Dart.
+Native complete reference correction had 33.2 ms p95, excluding application
+guards. The original hosted run used a different AMD CPU, so cross-run changes
+are not an isolated hardware-controlled code comparison.
+
+The next selected implementation/qualification target is the preferred
+CrispEmbed/ggml mixed Q4_K path. Retain this prepared-input native ORT plan as
+the fallback; it has promising measured engine behavior but still requires
+the compatible API-24 runtime, its own parity run and an actual Dart FFI bridge.
+No Rust model/session, wrapper or shipping application has been implemented
+by this roadmap update.
