@@ -1,7 +1,7 @@
 # German GECToR: conditional native ONNX backend
 
 Date: 2026-11-17. Branch: `feat/german-gector-proofing`.
-Status: roadmap only; fallback after the selected CrispEmbed Q4_K qualification lane.
+Status: roadmap only; engineering fallback after CrispEmbed Q4_K, not license-approved for shipping.
 Base: `d1500cdf248fc5447fb723f38e7cf3ee21b30487` from probe/ort-rc12.
 
 The [canonical Quds roadmap](https://github.com/CrispStrobe/quds_office_suite/blob/feat/german-gector-proofing/docs/roadmaps/german-gector-proofing.md) owns scope, model provenance,
@@ -11,7 +11,8 @@ decoder behavior, backend decision and acceptance gates.
 
 The bounded Dart round missed the complete-check latency budget. CrispEmbed
 Q4_K is the next qualification lane; activate this Rust fallback if that path
-fails its quality, performance or packaging gates. Provide a small dedicated
+fails its quality, performance or packaging gates, and this backend can satisfy
+the strict permissive-license boundary below. Provide a small dedicated
 grammar/session or prepared-input API using the existing ort/tokenizers stack. Reuse pinned file-based model loading but keep
 a grammar model separate from pooled/normalized embedding model registration.
 
@@ -108,3 +109,23 @@ the fallback; it has promising measured engine behavior but still requires
 the compatible API-24 runtime, its own parity run and an actual Dart FFI bridge.
 No Rust model/session, wrapper or shipping application has been implemented
 by this roadmap update.
+
+## Shipping-license boundary found during final qualification review
+
+The measured Python ORT 1.23.2 control demonstrates native engine behavior;
+it does not approve that distribution for the application. ORT has an MIT
+top-level license, but the pinned
+[1.23.2 third-party notices](https://github.com/microsoft/onnxruntime/blob/a83fc4d58cb48eb68890dd689f94f28288cf2278/ThirdPartyNotices.txt)
+include Eigen under MPL-2.0. That falls outside this feature's strict
+MIT/Apache/BSD/similar permissive allowlist. Do not rely on the Rust wrapper's
+license or ORT's top-level license to approve the complete native dependency
+closure.
+
+Native ORT therefore remains a development/performance oracle and a conditional
+engineering fallback, not an approved shipping choice. Before activating it,
+qualify the exact API-24-compatible binary's compiled dependencies and applicable
+notices; the measured 1.23.2 wheel is neither a version-matched substitute nor
+license clearance for another build. No compatible, fully permissive binary
+has been demonstrated by this work. Do not relax the user's license constraint
+to make the fallback available. CrispEmbed's controlled ggml/Q4_K target stays
+the preferred next lane, with its own artifact-level license qualification.
